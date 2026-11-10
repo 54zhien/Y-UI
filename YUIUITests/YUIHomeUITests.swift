@@ -15,10 +15,14 @@ final class YUIHomeUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        // 上一个用例若没退干净，launch() 自身的 terminate 会偶发失败（CI 上出现过一次），
+        // 这里先显式结束再启动。
+        app.terminate()
         app.launch()
     }
 
     override func tearDownWithError() throws {
+        app?.terminate()
         app = nil
     }
 

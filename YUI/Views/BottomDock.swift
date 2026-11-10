@@ -63,7 +63,6 @@ struct BottomDock: View {
                 }
 
                 warModeCapsule
-                    .frame(maxWidth: .infinity)
 
                 circleButton(symbol: "magnifyingglass", label: "搜索") {
                     model.activeSheet = .search
@@ -123,6 +122,10 @@ struct BottomDock: View {
             .frame(height: controlHeight)
         }
         .buttonStyle(.plain)
+        // 先把按钮撑满可用宽度，再把玻璃画在撑满后的 frame 上，
+        // 否则玻璃只会包住内容本身，看起来仍是中间一小块。
+        .frame(maxWidth: .infinity)
+        .frame(height: controlHeight)
         .glassEffect(warModeGlass, in: .capsule)
         .accessibilityLabel("战争模式")
         .accessibilityValue(model.warModeEnabled ? "开" : "关")
