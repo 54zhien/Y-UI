@@ -103,4 +103,10 @@ else
   echo "no narrow iPhone available; skipping home-narrow-light"
 fi
 
+# 复位外观与字号，避免影响后续步骤（例如 UI 测试）
+if [ -n "$PRIMARY" ]; then
+  xcrun simctl ui "$PRIMARY" appearance light || true
+  xcrun simctl ui "$PRIMARY" content_size large || true
+fi
+
 ls -l "$OUT_DIR"
