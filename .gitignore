@@ -6,8 +6,12 @@ xcuserdata/
 *.xcworkspace/xcuserdata/
 .DS_Store
 
-# 构建产物与 CI 输出
+# 鏋勫缓浜х墿涓?CI 杈撳嚭
 artifacts/
 build.log
 *.ipa
 *.dSYM.zip
+
+# CI 下载与本地产物
+ci-artifacts*/
+ci-job*.log
