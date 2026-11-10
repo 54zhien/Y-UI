@@ -5,6 +5,11 @@ on:
     branches: [ main ]
   pull_request:
   workflow_dispatch:
+    inputs:
+      quick:
+        description: build and UI tests only
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-build-${{ github.ref }}
@@ -47,10 +52,12 @@ jobs:
           if-no-files-found: warn
 
       - name: Capture simulator screenshots (light / dark)
+        if: inputs.quick != true
         continue-on-error: true
         run: bash Scripts/ci-capture-screenshots.sh
 
       - name: Capture app icon appearance
+        if: inputs.quick != true
         continue-on-error: true
         run: bash Scripts/ci-capture-icon.sh
 
@@ -58,7 +65,7 @@ jobs:
         run: bash Scripts/ci-run-ui-tests.sh
 
       - name: Upload screenshots
-        if: always()
+        if: always() && inputs.quick != true
         uses: actions/upload-artifact@v4
         with:
           name: simulator-screenshots
@@ -66,10 +73,11 @@ jobs:
           if-no-files-found: warn
 
       - name: Build unsigned Release IPA
+        if: inputs.quick != true
         run: bash Scripts/ci-build-unsigned-ipa.sh
 
       - name: Upload unsigned IPA
-        if: always()
+        if: always() && inputs.quick != true
         uses: actions/upload-artifact@v4
         with:
           name: unsigned-ipa

@@ -5,6 +5,7 @@ struct HomeView: View {
     @State private var model = HomeModel()
 
     private let dockReserve: CGFloat = 132
+    private let edgeFade: CGFloat = 44
 
     var body: some View {
         @Bindable var model = model
@@ -33,6 +34,18 @@ struct HomeView: View {
                     .padding(.bottom, dockReserve)
                 }
                 .scrollIndicators(.hidden)
+                .mask {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: min(0.5, edgeFade / max(proxy.size.height, 1))),
+                            .init(color: .black, location: max(0.5, 1 - edgeFade / max(proxy.size.height, 1))),
+                            .init(color: .clear, location: 1)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
 
                 BottomDock(model: model, containerSize: proxy.size, safeArea: proxy.safeAreaInsets)
             }
