@@ -60,3 +60,23 @@ jobs:
           name: simulator-screenshots
           path: artifacts/
           if-no-files-found: warn
+
+      - name: Build unsigned Release IPA
+        run: bash Scripts/ci-build-unsigned-ipa.sh
+
+      - name: Upload unsigned IPA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-ipa
+          path: |
+            artifacts/YUI-unsigned.ipa
+            artifacts/ipa-build.log
+            artifacts/ipa-contents.txt
+            artifacts/ipa-executable.txt
+            artifacts/ipa-info.txt
+            artifacts/ipa-bundle.txt
+            artifacts/ipa-assets.json
+            artifacts/ipa-assets-grep.txt
+            artifacts/ipa-size.txt
+          if-no-files-found: warn
