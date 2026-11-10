@@ -113,14 +113,14 @@ final class YUIHomeUITests: XCTestCase {
         XCTAssertTrue(app.switches["社区"].exists, "设置页应列出联网与服务项目")
 
         app.buttons["搜索项目"].tap()
-        let field = app.textFields["搜索项目"]
+        let field = app.textFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 6), "应出现搜索输入框")
         field.tap()
         field.typeText("天气")
         XCTAssertTrue(app.switches["天气"].waitForExistence(timeout: 6))
         XCTAssertFalse(app.switches["社区"].exists, "搜索应过滤掉不匹配项目")
 
-        app.buttons["收起搜索"].tap()
+        app.buttons["退出搜索"].tap()
         app.buttons["关闭战争模式设置"].tap()
         XCTAssertTrue(capsule.waitForExistence(timeout: 10), "关闭后应回到首页胶囊")
     }

@@ -1,50 +1,64 @@
 {
-  "fill-specializations" : [
-    {
-      "value" : {
-        "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
-      }
-    },
-    {
-      "appearance" : "dark",
-      "value" : {
-        "solid" : "srgb:0.96863,0.96863,0.98039,1.00000"
-      }
-    }
-  ],
-  "groups" : [
-    {
-      "layers" : [
-        {
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "YKB.svg",
-          "name" : "YKB",
-          "opacity" : 1,
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        }
-      ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.35
-      },
-      "specular" : true,
-      "translucency" : {
-        "enabled" : false,
-        "value" : 0.5
-      }
-    }
-  ],
-  "supported-platforms" : {
-    "circles" : [
-      "watchOS"
-    ],
-    "squares" : "shared"
-  }
+    "fill-specializations":  [
+                                 {
+                                     "value":  {
+                                                   "solid":  "srgb:1.00000,1.00000,1.00000,1.00000"
+                                               }
+                                 },
+                                 {
+                                     "appearance":  "dark",
+                                     "value":  {
+                                                   "solid":  "srgb:0.96863,0.96863,0.98039,1.00000"
+                                               }
+                                 }
+                             ],
+    "groups":  [
+                   {
+                       "layers":  [
+                                      {
+                                          "glass":  false,
+                                          "hidden":  false,
+                                          "image-name":  "metallic-bg.svg",
+                                          "name":  "metallic",
+                                          "opacity":  1,
+                                          "position":  {
+                                                           "scale":  1,
+                                                           "translation-in-points":  [
+                                                                                         0,
+                                                                                         0
+                                                                                     ]
+                                                       }
+                                      },
+                                      {
+                                          "glass":  true,
+                                          "hidden":  false,
+                                          "image-name":  "YKB.svg",
+                                          "name":  "YKB",
+                                          "opacity":  1,
+                                          "position":  {
+                                                           "scale":  1,
+                                                           "translation-in-points":  [
+                                                                                         0,
+                                                                                         0
+                                                                                     ]
+                                                       }
+                                      }
+                                  ],
+                       "shadow":  {
+                                      "kind":  "neutral",
+                                      "opacity":  0.5
+                                  },
+                       "specular":  true,
+                       "translucency":  {
+                                            "enabled":  false,
+                                            "value":  0.5
+                                        }
+                   }
+               ],
+    "supported-platforms":  {
+                                "circles":  [
+                                                "watchOS"
+                                            ],
+                                "squares":  "shared"
+                            }
 }
