@@ -45,10 +45,11 @@ NARROW="$(echo "$DEVICES" | awk '{print $2}')"
 # runner 上没有现成的 SE / mini 时，按设备类型临时建一台窄屏机（375pt 宽，
 # 用来触发 isNarrow 分支），用完不清理（runner 是临时的）。
 if [ -z "$NARROW" ]; then
-  NARROW_TYPE="$(xcrun simctl list devicetypes | sed -n 's/.*(\(com\.apple\.CoreSimulator\.SimDeviceType\.iPhone-SE[^)]*\)).*/\1/p' | tail -1)"
-  NARROW_RUNTIME="$(xcrun simctl list runtimes | sed -n 's/.*(\(com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9-]*\)).*/\1/p' | tail -1)"
+  NARROW_TYPE="$(xcrun simctl list devicetypes | sed -n 's/.*com\.apple\.CoreSimulator\.SimDeviceType\.\(iPhone-SE[^)]*\).*/com.apple.CoreSimulator.SimDeviceType.\1/p' | tail -1)"
+  NARROW_RUNTIME="$(xcrun simctl list runtimes | sed -n 's/.*com\.apple\.CoreSimulator\.SimRuntime\.\(iOS-[0-9-]*\).*/com.apple.CoreSimulator.SimRuntime.\1/p' | tail -1)"
+  echo "narrow type=${NARROW_TYPE:-none} runtime=${NARROW_RUNTIME:-none}"
   if [ -n "$NARROW_TYPE" ] && [ -n "$NARROW_RUNTIME" ]; then
-    NARROW="$(xcrun simctl create "dsh-narrow" "$NARROW_TYPE" "$NARROW_RUNTIME" 2>/dev/null || true)"
+    NARROW="$(xcrun simctl create "dsh-narrow" "$NARROW_TYPE" "$NARROW_RUNTIME" || true)"
   fi
 fi
 
