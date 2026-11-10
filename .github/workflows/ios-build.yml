@@ -50,6 +50,10 @@ jobs:
         continue-on-error: true
         run: bash Scripts/ci-capture-screenshots.sh
 
+      - name: Capture app icon appearance
+        continue-on-error: true
+        run: bash Scripts/ci-capture-icon.sh
+
       - name: Run UI tests (interaction verification)
         run: bash Scripts/ci-run-ui-tests.sh
 
@@ -79,4 +83,5 @@ jobs:
             artifacts/ipa-assets.json
             artifacts/ipa-assets-grep.txt
             artifacts/ipa-size.txt
+            artifacts/icon/
           if-no-files-found: warn
