@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 set -euo pipefail
 
 BUNDLE_ID="com.dsh.yui.demo"
