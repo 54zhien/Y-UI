@@ -163,29 +163,35 @@ struct PanelTile: View {
     private func cardContent(showsEditRow: Bool) -> some View {
         GlassCard(style: .liquid) {
             VStack(alignment: .leading, spacing: showsEditRow ? 8 : 0) {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: item.symbol)
-                        .font(.system(size: 17, weight: .medium))
-                        .frame(width: 22, height: 22)
+                VStack(alignment: .leading, spacing: 4) {
+                    // 图标与小标题同一行、垂直居中
+                    HStack(spacing: 8) {
+                        Image(systemName: item.symbol)
+                            .font(.system(size: 17, weight: .medium))
+                            .frame(width: 22, height: 22)
+                            .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: 3) {
                         Text(item.title)
                             .font(Theme.rounded(.caption, weight: .medium))
                             .foregroundStyle(.secondary)
                             .lineLimit(wrapsText ? nil : 1)
-                        Text(item.value)
-                            .font(Theme.rounded(.headline, weight: .bold))
-                            .lineLimit(wrapsText ? nil : 1)
-                            .minimumScaleFactor(wrapsText ? 1 : 0.8)
-                        Text(item.detail)
-                            .font(Theme.rounded(.caption2))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(wrapsText ? nil : 1)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
 
-                    Spacer(minLength: 0)
+                        Spacer(minLength: 0)
+                    }
+
+                    // 主内容与说明回到卡片内容左边缘，不再缩进到图标右侧
+                    Text(item.value)
+                        .font(Theme.rounded(.headline, weight: .bold))
+                        .lineLimit(wrapsText ? nil : 1)
+                        .minimumScaleFactor(wrapsText ? 1 : 0.8)
+                    Text(item.detail)
+                        .font(Theme.rounded(.caption2))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(wrapsText ? nil : 1)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                // 编辑模式下整块文字右侧让出隐藏按钮的位置，控件与文案不重叠
                 .padding(.trailing, showsEditRow ? controlReserve : 0)
 
                 if showsEditRow {
