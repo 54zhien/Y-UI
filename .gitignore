@@ -12,3 +12,6 @@ build.log
 
 ci-artifacts*/
 ci-job*.log
+
+ci-run*/
+ci-run-latest/
