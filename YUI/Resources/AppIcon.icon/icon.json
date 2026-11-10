@@ -16,10 +16,10 @@
                    {
                        "layers":  [
                                       {
-                                          "glass":  false,
+                                          "glass":  true,
                                           "hidden":  false,
-                                          "image-name":  "metallic-bg.svg",
-                                          "name":  "metallic",
+                                          "image-name":  "YKB.svg",
+                                          "name":  "YKB",
                                           "opacity":  1,
                                           "position":  {
                                                            "scale":  1,
@@ -30,10 +30,10 @@
                                                        }
                                       },
                                       {
-                                          "glass":  true,
+                                          "glass":  false,
                                           "hidden":  false,
-                                          "image-name":  "YKB.svg",
-                                          "name":  "YKB",
+                                          "image-name":  "metallic-bg.svg",
+                                          "name":  "metallic",
                                           "opacity":  1,
                                           "position":  {
                                                            "scale":  1,
