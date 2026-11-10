@@ -1,11 +1,3 @@
-//
-//  PanelItem.swift
-//  YUI
-//
-//  首页「你的设置」两列面板入口的静态演示数据。
-//  所有文案与数字均为占位演示内容，不代表真实功能。
-//
-
 import Foundation
 
 struct PanelItem: Identifiable, Hashable {

@@ -1,11 +1,3 @@
-//
-//  KeyboardPreviewCard.swift
-//  YUI
-//
-//  「当前键盘」预览卡片：静态模拟候选栏与九宫格按键（参考图 3）。
-//  纯装饰视图，不可点击、不输入、不接入任何键盘扩展。
-//
-
 import SwiftUI
 
 struct KeyboardPreviewCard: View {
@@ -13,8 +5,6 @@ struct KeyboardPreviewCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    /// 辅助功能字号下把卡片底部的「标题 / 跟随系统」改为上下排列并允许换行，
-    /// 避免大字号下被连字符拆断或截断。
     private var usesStackedFooter: Bool {
         dynamicTypeSize >= .accessibility1
     }
@@ -46,8 +36,6 @@ struct KeyboardPreviewCard: View {
         .accessibilityValue("候选栏：\(candidates.joined(separator: "、"))；九宫格字母键与符号键，不可输入")
     }
 
-    // MARK: - 底部签名行
-
     @ViewBuilder
     private var footer: some View {
         if usesStackedFooter {
@@ -74,8 +62,6 @@ struct KeyboardPreviewCard: View {
             .padding(.horizontal, 2)
         }
     }
-
-    // MARK: - 键盘主体
 
     private var keyboard: some View {
         VStack(spacing: 8) {
@@ -149,7 +135,6 @@ struct KeyboardPreviewCard: View {
     }
 }
 
-/// 预览键盘的功能键类型。
 enum PreviewKey: Identifiable {
     case text(String)
     case symbol(String)
@@ -162,7 +147,6 @@ enum PreviewKey: Identifiable {
     }
 }
 
-/// 单个模拟键帽。
 struct KeyCap: View {
 
     @Environment(\.colorScheme) private var colorScheme

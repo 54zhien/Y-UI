@@ -1,11 +1,3 @@
-//
-//  YUIHomeUITests.swift
-//  YUIUITests
-//
-//  对「管理模式 / 上移下移 / 隐藏恢复 / 战争模式切换 / 滚到底管理按钮可见」做真实
-//  模拟器交互验证。仅依赖 App 已有的无障碍 label，不注入任何测试专用代码。
-//
-
 import XCTest
 
 final class YUIHomeUITests: XCTestCase {
@@ -15,8 +7,7 @@ final class YUIHomeUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        // 上一个用例若没退干净，launch() 自身的 terminate 会偶发失败（CI 上出现过一次），
-        // 这里先显式结束再启动。
+
         app.terminate()
         app.launch()
     }
@@ -26,9 +17,6 @@ final class YUIHomeUITests: XCTestCase {
         app = nil
     }
 
-    // MARK: - 工具
-
-    /// 把当前屏幕截图挂到测试报告里（xcresult 附件）。
     private func attach(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
@@ -52,8 +40,6 @@ final class YUIHomeUITests: XCTestCase {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "\(title)，")).firstMatch
     }
 
-    // MARK: - 战争模式胶囊
-
     func testWarModeCapsuleTogglesState() {
         let capsule = app.buttons["战争模式"]
         XCTAssertTrue(capsule.waitForExistence(timeout: 20), "底部战争模式胶囊应存在")
@@ -69,8 +55,6 @@ final class YUIHomeUITests: XCTestCase {
         expectation(for: NSPredicate(format: "value == %@", "关"), evaluatedWith: capsule)
         waitForExpectations(timeout: 5)
     }
-
-    // MARK: - 非管理模式：面板可点
 
     func testNonEditingTileOpensDemoSheet() {
         let tile = panelTile("主题")
@@ -88,12 +72,9 @@ final class YUIHomeUITests: XCTestCase {
         app.buttons["战争模式"].waitForExistence(timeout: 8)
     }
 
-    // MARK: - 管理模式：独立控件 + 排序
-
     func testManageModeExposesIndependentEditControlsAndReorders() {
         enterManageMode()
 
-        // 回到顶部，检查首个面板的编辑控件
         let moveUpFirst = app.buttons["上移主题"]
         scrollUntilHittable(moveUpFirst, up: false, maxSwipes: 20)
         XCTAssertTrue(app.buttons["隐藏主题"].exists, "管理模式下应有隐藏控件")
@@ -101,14 +82,12 @@ final class YUIHomeUITests: XCTestCase {
         XCTAssertFalse(moveUpFirst.isEnabled, "首项不应可上移")
         attach("edit-controls")
 
-        // 编辑模式下点击卡片本体不应再打开说明页（原来外层 Button 的问题）
         app.staticTexts["主题"].firstMatch.tap()
         XCTAssertFalse(
             app.navigationBars["主题"].waitForExistence(timeout: 2),
             "编辑模式下点击卡片本体不应打开占位说明页"
         )
 
-        // 下移「主题」，顺序变化：外观成为第一项
         let moveDown = app.buttons["下移主题"]
         XCTAssertTrue(moveDown.isHittable, "下移按钮应可点")
         moveDown.tap()
@@ -118,11 +97,8 @@ final class YUIHomeUITests: XCTestCase {
         waitForExpectations(timeout: 6)
         attach("edit-reordered")
 
-        // 退出编辑
         exitManageMode()
     }
-
-    // MARK: - 隐藏 / 恢复
 
     func testHideAndRestorePanel() {
         enterManageMode()
@@ -144,8 +120,6 @@ final class YUIHomeUITests: XCTestCase {
         exitManageMode()
     }
 
-    // MARK: - 滚到底：管理按钮可见
-
     func testManageButtonReachableAfterScrollingToBottom() {
         let manage = app.buttons["管理面板"]
         XCTAssertTrue(manage.waitForExistence(timeout: 20), "管理按钮应在视图层级中存在")
@@ -159,8 +133,6 @@ final class YUIHomeUITests: XCTestCase {
         attach("scroll-bottom-manage")
         XCTAssertFalse(app.buttons["隐藏主题"].exists, "非编辑模式不应出现隐藏控件")
     }
-
-    // MARK: - 模式切换封装
 
     private func enterManageMode() {
         let manage = app.buttons["管理面板"]

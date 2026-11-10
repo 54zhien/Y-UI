@@ -1,18 +1,4 @@
-//
-//  PanelGrid.swift
-//  YUI
-//
-//  两列面板入口网格 + 管理模式（抖动、拖动/上移下移排序、隐藏、重新添加）。
-//  结构约束：
-//  - 非管理模式：整张卡片是一个 Button（点开占位说明页）；
-//  - 管理模式：卡片本体不再是 Button，隐藏/上移/下移是各自独立的 Button，
-//    不存在 Button 嵌套 Button，也不靠 disabled 外层按钮来屏蔽点击。
-//  辅助功能字号下改为单列、文案允许换行；普通字号维持两列。
-//
-
 import SwiftUI
-
-// MARK: - 网格
 
 struct PanelGrid: View {
 
@@ -72,7 +58,6 @@ struct PanelGrid: View {
         return true
     }
 
-    /// 开启「减少动态效果」时保持静止，不抖动。
     private func applyShake(_ editing: Bool) {
         guard editing, !reduceMotion else {
             withAnimation(.linear(duration: 0.12)) {
@@ -87,9 +72,6 @@ struct PanelGrid: View {
     }
 }
 
-// MARK: - 仅在管理模式下允许拖动与放置
-
-/// 非管理模式下完全不挂拖动与放置，避免误触和与滚动/点击手势抢占。
 struct EditOnlyReorder: ViewModifier {
 
     let enabled: Bool
@@ -110,8 +92,6 @@ struct EditOnlyReorder: ViewModifier {
     }
 }
 
-// MARK: - 单个面板
-
 struct PanelTile: View {
 
     let item: PanelItem
@@ -121,7 +101,6 @@ struct PanelTile: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    /// 管理模式下给右上角隐藏按钮预留的宽度，避免遮挡标题与数值文字。
     private let controlReserve: CGFloat = 40
 
     private var wrapsText: Bool {
@@ -146,8 +125,6 @@ struct PanelTile: View {
         .modifier(ShakeEffect(animatableData: isEditing ? shakePhase : 0))
     }
 
-    // MARK: 管理模式：卡片本体 + 独立控件
-
     private var editableCard: some View {
         ZStack(alignment: .topTrailing) {
             cardContent(showsEditRow: true)
@@ -158,13 +135,11 @@ struct PanelTile: View {
         .accessibilityLabel("\(item.title)面板，编辑中")
     }
 
-    // MARK: 卡片内容（不含任何按钮逻辑）
-
     private func cardContent(showsEditRow: Bool) -> some View {
         GlassCard(style: .liquid) {
             VStack(alignment: .leading, spacing: showsEditRow ? 8 : 0) {
                 VStack(alignment: .leading, spacing: 4) {
-                    // 图标与小标题同一行、垂直居中
+
                     HStack(spacing: 8) {
                         Image(systemName: item.symbol)
                             .font(.system(size: 17, weight: .medium))
@@ -179,7 +154,6 @@ struct PanelTile: View {
                         Spacer(minLength: 0)
                     }
 
-                    // 主内容与说明回到卡片内容左边缘，不再缩进到图标右侧
                     Text(item.value)
                         .font(Theme.rounded(.headline, weight: .bold))
                         .lineLimit(wrapsText ? nil : 1)
@@ -191,7 +165,7 @@ struct PanelTile: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
-                // 编辑模式下整块文字右侧让出隐藏按钮的位置，控件与文案不重叠
+
                 .padding(.trailing, showsEditRow ? controlReserve : 0)
 
                 if showsEditRow {
@@ -215,15 +189,12 @@ struct PanelTile: View {
         }
     }
 
-    // MARK: 编辑控件（独立按钮）
-
     private var hideButton: some View {
         editButton("eye.slash", label: "隐藏\(item.title)") {
             model.hide(item)
         }
     }
 
-    /// 视觉 30pt 的玻璃圆钮，命中区域扩到 44pt。
     private func editButton(
         _ symbol: String,
         label: String,
@@ -248,8 +219,6 @@ struct PanelTile: View {
         .accessibilityLabel(label)
     }
 }
-
-// MARK: - 已隐藏面板（重新添加）
 
 struct HiddenPanelsBar: View {
 
@@ -297,8 +266,6 @@ struct HiddenPanelsBar: View {
     }
 }
 
-// MARK: - 示例说明
-
 struct DemoNoteCard: View {
 
     var body: some View {
@@ -319,9 +286,6 @@ struct DemoNoteCard: View {
     }
 }
 
-// MARK: - 抖动效果
-
-/// 管理模式下的轻微横向抖动；相位为 0 时完全静止。
 struct ShakeEffect: GeometryEffect {
 
     var travel: CGFloat = 1.8

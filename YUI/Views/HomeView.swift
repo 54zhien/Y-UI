@@ -1,19 +1,9 @@
-//
-//  HomeView.swift
-//  YUI
-//
-//  首页：全屏弥散渐变 + 当前键盘预览 + 两列面板入口 + 管理入口 +
-//  底部悬浮玻璃控件（设置 / 战争模式胶囊 / 搜索）。
-//  战争模式只在底部胶囊上呈现与切换，页面顶部不再有状态卡。
-//
-
 import SwiftUI
 
 struct HomeView: View {
 
     @State private var model = HomeModel()
 
-    /// 底部悬浮控件占用的高度，用于给滚动内容留出空间，避免底栏遮挡内容。
     private let dockReserve: CGFloat = 132
 
     var body: some View {
@@ -54,8 +44,6 @@ struct HomeView: View {
             DemoSheet(route: route)
         }
     }
-
-    // MARK: - 管理入口（放在面板列表底部，参考图 4）
 
     private var manageButton: some View {
         HStack {

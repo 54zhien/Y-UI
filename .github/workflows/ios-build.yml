@@ -46,14 +46,10 @@ jobs:
           path: build.log
           if-no-files-found: warn
 
-      # 可选证据：启动模拟器、安装并各截一张浅色/深色图。
-      # 只采集视觉证据，不验证交互逻辑，也不代表通过了人工视觉验收。
       - name: Capture simulator screenshots (light / dark)
         continue-on-error: true
         run: bash Scripts/ci-capture-screenshots.sh
 
-      # 真实交互验证：管理模式、上移/下移、隐藏/恢复、战争模式切换、滚到底管理按钮可点。
-      # 这一步失败视为任务失败，不吞掉错误。
       - name: Run UI tests (interaction verification)
         run: bash Scripts/ci-run-ui-tests.sh
 

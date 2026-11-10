@@ -1,11 +1,3 @@
-//
-//  DemoSheet.swift
-//  YUI
-//
-//  面板 / 设置 / 搜索的占位说明页。明确标注「演示占位」，
-//  不模拟真实功能，不写入任何数据。
-//
-
 import SwiftUI
 
 enum DemoSheetRoute: Identifiable, Hashable {
@@ -71,8 +63,6 @@ struct DemoSheet: View {
         .presentationDetents([.medium, .large])
     }
 
-    // MARK: - 面板
-
     private func panelContent(_ item: PanelItem) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -102,8 +92,6 @@ struct DemoSheet: View {
         }
         .accessibilityElement(children: .combine)
     }
-
-    // MARK: - 设置
 
     private var settingsContent: some View {
         GlassCard {
@@ -141,8 +129,6 @@ struct DemoSheet: View {
         .accessibilityHint("演示占位，不可操作")
     }
 
-    // MARK: - 搜索
-
     private var searchContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
@@ -170,8 +156,6 @@ struct DemoSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
-
-    // MARK: - 统一说明
 
     private var demoNote: some View {
         Text("演示占位：本页面用于核对布局与材料，没有真实数据与业务逻辑。")

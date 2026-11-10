@@ -1,11 +1,3 @@
-//
-//  DiffuseBackground.swift
-//  YUI
-//
-//  全屏柔和弥散渐变：浅色为冷蓝淡紫（参考图 1），深色为深蓝紫到酒红（参考图 2）。
-//  使用公开的 MeshGradient 得到无接缝的弥散效果，不使用私有 API。
-//
-
 import SwiftUI
 
 struct DiffuseBackground: View {
@@ -13,14 +5,12 @@ struct DiffuseBackground: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    /// 3 × 3 网格的锚点，轻微偏移让色块过渡更自然。
     private let points: [SIMD2<Float>] = [
         SIMD2<Float>(0.0, 0.0), SIMD2<Float>(0.52, 0.0), SIMD2<Float>(1.0, 0.0),
         SIMD2<Float>(0.0, 0.48), SIMD2<Float>(0.46, 0.55), SIMD2<Float>(1.0, 0.5),
         SIMD2<Float>(0.0, 1.0), SIMD2<Float>(0.55, 1.0), SIMD2<Float>(1.0, 1.0)
     ]
 
-    /// 浅色：冷蓝 → 淡紫；深色：深蓝紫 → 酒红。
     private var colors: [Color] {
         if colorScheme == .dark {
             return [
@@ -39,13 +29,12 @@ struct DiffuseBackground: View {
     var body: some View {
         ZStack {
             if reduceTransparency {
-                // 降低透明度开启时使用同色系的稳定底色，避免依赖半透明叠加。
+
                 (colorScheme == .dark ? Color(hex: 0x2A1F3A) : Color(hex: 0xEDEFFA))
             } else {
                 MeshGradient(width: 3, height: 3, points: points, colors: colors)
             }
 
-            // 一层极淡的高光，让大面积渐变有空气感。
             RadialGradient(
                 colors: [
                     Color.white.opacity(colorScheme == .dark ? 0.10 : 0.35),

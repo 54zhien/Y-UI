@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-#
-# 在 macOS CI runner 上启动 iPhone 模拟器，安装 Debug 构建并截图：
-#   home-light / home-dark           常规字号、浅色与深色
-#   home-a11y-xxxl                   辅助功能最大字号（核查底栏与网格不崩）
-#   home-narrow-light                窄屏机型（若 runner 上有 SE / mini）
-#
-# 说明：只采集视觉证据，不驱动任何交互（管理模式、抖动、排序、战争模式切换
-# 仍需要人工或 UI 测试验证），截图本身不等于视觉验收。
 
 set -euo pipefail
 
@@ -42,9 +34,6 @@ print(phones[0]["udid"] if phones else "", narrow[0]["udid"] if narrow else "")
 PRIMARY="$(echo "$DEVICES" | awk '{print $1}')"
 NARROW="$(echo "$DEVICES" | awk '{print $2}')"
 
-# runner 上没有现成的 SE / mini 时，按「受支持机型 + 当前 iOS 运行时」临时建一台
-# 375pt 宽的窄屏机（iPhone SE 第 3 代），用来触发 isNarrow 分支。runner 是临时环境，
-# 不额外清理。建机失败时静默跳过，不影响其余截图。
 if [ -z "$NARROW" ]; then
   NARROW_RUNTIME="$(xcrun simctl list runtimes | sed -n 's/.*com\.apple\.CoreSimulator\.SimRuntime\.\(iOS-[0-9-]*\).*/com.apple.CoreSimulator.SimRuntime.\1/p' | tail -1)"
   echo "narrow runtime: ${NARROW_RUNTIME:-none}"
@@ -103,7 +92,6 @@ else
   echo "no narrow iPhone available; skipping home-narrow-light"
 fi
 
-# 复位外观与字号，避免影响后续步骤（例如 UI 测试）
 if [ -n "$PRIMARY" ]; then
   xcrun simctl ui "$PRIMARY" appearance light || true
   xcrun simctl ui "$PRIMARY" content_size large || true

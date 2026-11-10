@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-#
-# 在 macOS CI runner 的 iPhone 模拟器上运行 XCUITest，验证真实交互：
-# 管理模式、上移/下移、隐藏/恢复、战争模式切换、滚到底后管理按钮可点。
-#
-# 产出：artifacts/ui-tests.log（xcodebuild 输出）
-#       artifacts/YUIUITests.xcresult（测试结果 + 截图附件）
-#       artifacts/ui-test-attachments/（尽力导出的截图附件）
 
 set -euo pipefail
 
@@ -37,8 +30,6 @@ echo "ui-test device: ${UDID}"
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b
 
-# UI 测试固定跑默认字号 + 浅色外观，避免上一步（辅助字号截图）的状态泄漏进来，
-# 保证结果可复现；辅助字号布局由截图覆盖。
 xcrun simctl ui "$UDID" content_size large || true
 xcrun simctl ui "$UDID" appearance light || true
 
