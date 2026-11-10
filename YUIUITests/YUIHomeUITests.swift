@@ -10,6 +10,7 @@ final class YUIHomeUITests: XCTestCase {
 
         app.terminate()
         app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
     }
 
     override func tearDownWithError() throws {
@@ -24,14 +25,15 @@ final class YUIHomeUITests: XCTestCase {
         add(attachment)
     }
 
-    private func scrollUntilHittable(_ element: XCUIElement, up: Bool, maxSwipes: Int = 15) {
+    private func scrollUntilHittable(_ element: XCUIElement, up: Bool, maxSwipes: Int = 10) {
         var swipes = 0
         while !element.isHittable && swipes < maxSwipes {
             if up {
-                app.swipeUp()
+                app.swipeUp(velocity: .fast)
             } else {
-                app.swipeDown()
+                app.swipeDown(velocity: .fast)
             }
+            Thread.sleep(forTimeInterval: 0.35)
             swipes += 1
         }
     }
@@ -76,7 +78,7 @@ final class YUIHomeUITests: XCTestCase {
         enterManageMode()
 
         let moveUpFirst = app.buttons["上移主题"]
-        scrollUntilHittable(moveUpFirst, up: false, maxSwipes: 20)
+        scrollUntilHittable(moveUpFirst, up: false, maxSwipes: 12)
         XCTAssertTrue(app.buttons["隐藏主题"].exists, "管理模式下应有隐藏控件")
         XCTAssertTrue(app.buttons["下移主题"].exists, "管理模式下应有下移控件")
         XCTAssertFalse(moveUpFirst.isEnabled, "首项不应可上移")
@@ -104,12 +106,12 @@ final class YUIHomeUITests: XCTestCase {
         enterManageMode()
 
         let hideTheme = app.buttons["隐藏主题"]
-        scrollUntilHittable(hideTheme, up: false, maxSwipes: 20)
+        scrollUntilHittable(hideTheme, up: false, maxSwipes: 12)
         hideTheme.tap()
 
         let restore = app.buttons["重新添加主题"]
         XCTAssertTrue(restore.waitForExistence(timeout: 8), "隐藏后应出现「重新添加主题」")
-        scrollUntilHittable(restore, up: true, maxSwipes: 12)
+        scrollUntilHittable(restore, up: true, maxSwipes: 10)
         attach("edit-hidden")
         XCTAssertTrue(restore.isHittable, "重新添加按钮应可点")
         restore.tap()
@@ -124,11 +126,8 @@ final class YUIHomeUITests: XCTestCase {
         let manage = app.buttons["管理面板"]
         XCTAssertTrue(manage.waitForExistence(timeout: 20), "管理按钮应在视图层级中存在")
 
-        var swipes = 0
-        while !manage.isHittable && swipes < 25 {
-            app.swipeUp()
-            swipes += 1
-        }
+        scrollUntilHittable(manage, up: true, maxSwipes: 10)
+        Thread.sleep(forTimeInterval: 0.6)
         XCTAssertTrue(manage.isHittable, "滚动到底后管理按钮应可点，不能被底部悬浮控件遮挡")
         attach("scroll-bottom-manage")
         XCTAssertFalse(app.buttons["隐藏主题"].exists, "非编辑模式不应出现隐藏控件")
@@ -137,7 +136,7 @@ final class YUIHomeUITests: XCTestCase {
     private func enterManageMode() {
         let manage = app.buttons["管理面板"]
         XCTAssertTrue(manage.waitForExistence(timeout: 20), "管理按钮应存在")
-        scrollUntilHittable(manage, up: true, maxSwipes: 25)
+        scrollUntilHittable(manage, up: true, maxSwipes: 12)
         XCTAssertTrue(manage.isHittable, "管理按钮应可点")
         manage.tap()
 
@@ -149,7 +148,7 @@ final class YUIHomeUITests: XCTestCase {
 
     private func exitManageMode() {
         let done = app.buttons["完成编辑"]
-        scrollUntilHittable(done, up: true, maxSwipes: 25)
+        scrollUntilHittable(done, up: true, maxSwipes: 12)
         if done.isHittable {
             done.tap()
         }
