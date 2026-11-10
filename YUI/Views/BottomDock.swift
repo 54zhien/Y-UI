@@ -56,14 +56,20 @@ struct BottomDock: View {
         let sideInset = max(8, min(alignmentInset, 30))
         let bottomInset = safeArea.bottom > 0 ? max(6, min(alignmentInset, 30)) : 14
 
-        // 不用 GlassEffectContainer 当布局容器：它会按内容理想宽度收敛，
-        // 导致中间的胶囊撑不满。三个控件间距 8pt 已足够近，玻璃是否融合不是这里的目标。
+        // 胶囊宽度直接按容器算，不依赖 HStack 的弹性分配：
+        // 整条栏 = 左右圆钮 + 两个 8pt 间距 + 胶囊，胶囊吃掉剩余全部宽度。
+        let capsuleWidth = max(
+            0,
+            containerSize.width - sideInset * 2 - controlHeight * 2 - controlSpacing * 2
+        )
+
         HStack(spacing: controlSpacing) {
             circleButton(symbol: "gearshape", label: "设置") {
                 model.activeSheet = .settings
             }
 
             warModeCapsule
+                .frame(width: capsuleWidth)
 
             circleButton(symbol: "magnifyingglass", label: "搜索") {
                 model.activeSheet = .search
