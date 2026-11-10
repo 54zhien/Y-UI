@@ -91,7 +91,7 @@ struct EditOnlyReorder: ViewModifier {
         if enabled {
             content
                 .draggable(payload)
-                .dropDestination(for: String.self) { identifiers, _ in
+                .dropDestination(for: String.self) { identifiers, _ -> Bool in
                     onDrop(identifiers)
                 }
         } else {

@@ -94,8 +94,13 @@ xcodebuild -project YUI.xcodeproj -scheme YUI -configuration Debug \
 ## 6. 构建工作流（GitHub Actions）
 
 `.github/workflows/ios-build.yml`：在 `macos-26` runner 上打印工具链版本、构建 iOS Simulator 包，
-并通过 `Scripts/ci-capture-screenshots.sh` 启动模拟器各截一张浅色 / 深色图（`artifacts/`），
-构建日志与截图都会作为 artifact 上传。
+并通过 `Scripts/ci-capture-screenshots.sh` 启动模拟器截图，构建日志与截图都作为 artifact 上传：
+
+| 截图 | 覆盖的场景 |
+| --- | --- |
+| `home-light` / `home-dark` | 常规字号，浅色 / 深色外观 |
+| `home-a11y-xxxl` | 辅助功能最大字号（核查底栏三控件与两列网格是否被压坏） |
+| `home-narrow-light` | 窄屏机型（runner 上有 SE / mini 时才有） |
 
 **CI 与实际视觉验证的区别（重要）**：
 
