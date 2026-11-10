@@ -136,7 +136,7 @@ struct PanelTile: View {
     }
 
     private func cardContent(showsEditRow: Bool) -> some View {
-        GlassCard {
+        GlassCard(style: .liquid) {
             VStack(alignment: .leading, spacing: showsEditRow ? 8 : 0) {
                 VStack(alignment: .leading, spacing: 4) {
 
