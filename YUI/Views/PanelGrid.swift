@@ -4,9 +4,7 @@ struct PanelGrid: View {
 
     let model: HomeModel
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var shakePhase: CGFloat = 0
 
     private var columns: [GridItem] {
         if dynamicTypeSize >= .accessibility1 {
@@ -20,12 +18,12 @@ struct PanelGrid: View {
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(model.panels) { item in
+            ForEach(Array(model.panels.enumerated()), id: \.element.id) { index, item in
                 PanelTile(
                     item: item,
                     model: model,
                     isEditing: model.isEditing,
-                    shakePhase: shakePhase
+                    swayIndex: index
                 )
                 .modifier(
                     EditOnlyReorder(enabled: model.isEditing, payload: item.id) { identifiers in
@@ -35,12 +33,6 @@ struct PanelGrid: View {
             }
         }
         .animation(.snappy, value: model.panels)
-        .onChange(of: model.isEditing) { _, editing in
-            applyShake(editing)
-        }
-        .onChange(of: reduceMotion) { _, _ in
-            applyShake(model.isEditing)
-        }
     }
 
     private func handleDrop(_ identifiers: [String], onto target: PanelItem) -> Bool {
@@ -58,18 +50,7 @@ struct PanelGrid: View {
         return true
     }
 
-    private func applyShake(_ editing: Bool) {
-        guard editing, !reduceMotion else {
-            withAnimation(.linear(duration: 0.12)) {
-                shakePhase = 0
-            }
-            return
-        }
-        shakePhase = 0
-        withAnimation(.linear(duration: 0.3).repeatForever(autoreverses: false)) {
-            shakePhase = 1
-        }
-    }
+
 }
 
 struct EditOnlyReorder: ViewModifier {
@@ -97,9 +78,11 @@ struct PanelTile: View {
     let item: PanelItem
     let model: HomeModel
     let isEditing: Bool
-    var shakePhase: CGFloat
+    let swayIndex: Int
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var swayForward = false
 
     private let controlReserve: CGFloat = 40
 
@@ -122,7 +105,40 @@ struct PanelTile: View {
                 .accessibilityHint("打开演示占位说明")
             }
         }
-        .modifier(ShakeEffect(animatableData: isEditing ? shakePhase : 0))
+        .rotationEffect(.degrees(swayDegrees))
+        .animation(swayAnimation, value: swayForward)
+        .onChange(of: isEditing) { _, editing in
+            if editing, !reduceMotion {
+                swayForward.toggle()
+            } else {
+                swayForward = false
+            }
+        }
+        .onAppear {
+            if isEditing, !reduceMotion {
+                swayForward = swayIndex % 2 == 0
+            }
+        }
+    }
+
+    private var swayDegrees: Double {
+        guard isEditing else { return 0 }
+        return swayForward ? swayAmplitude : -swayAmplitude
+    }
+
+    private var swayAmplitude: Double {
+        0.42 + Double(swayIndex % 3) * 0.12
+    }
+
+    private var swayDuration: Double {
+        0.92 + Double(swayIndex % 4) * 0.21
+    }
+
+    private var swayAnimation: Animation? {
+        guard isEditing, !reduceMotion else { return nil }
+        return .easeInOut(duration: swayDuration)
+            .repeatForever(autoreverses: true)
+            .delay(Double(swayIndex % 5) * 0.08)
     }
 
     private var editableCard: some View {
@@ -263,39 +279,6 @@ struct HiddenPanelsBar: View {
                 .scrollIndicators(.hidden)
             }
         }
-    }
-}
-
-struct DemoNoteCard: View {
-
-    var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("示例说明")
-                    .font(Theme.rounded(.footnote, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text("本页是静态界面演示：键盘预览、面板数据与统计数字都是占位内容，不接入真实键盘、网络或业务。编辑模式下的排序、隐藏与重新添加只改内存状态，退出应用即复原。")
-                    .font(Theme.rounded(.footnote))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-struct ShakeEffect: GeometryEffect {
-
-    var travel: CGFloat = 1.8
-    var shakesPerUnit: CGFloat = 3
-    var animatableData: CGFloat
-
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        let angle = Double(animatableData) * Double.pi * 2 * Double(shakesPerUnit)
-        let offset = travel * CGFloat(sin(angle))
-        return ProjectionTransform(CGAffineTransform(translationX: offset, y: 0))
     }
 }
 

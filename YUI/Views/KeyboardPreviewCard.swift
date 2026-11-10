@@ -23,7 +23,7 @@ struct KeyboardPreviewCard: View {
     ]
 
     var body: some View {
-        GlassCard(cornerRadius: Theme.panelCornerRadius) {
+        GlassCard(style: .liquid, cornerRadius: Theme.panelCornerRadius) {
             VStack(alignment: .leading, spacing: 14) {
                 keyboard
 

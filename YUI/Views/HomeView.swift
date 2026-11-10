@@ -26,8 +26,6 @@ struct HomeView: View {
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
                         }
 
-                        DemoNoteCard()
-
                         manageButton
                     }
                     .padding(.horizontal, 18)
@@ -54,9 +52,11 @@ struct HomeView: View {
                 }
             } label: {
                 Text(model.isEditing ? "完成" : "管理")
-                    .font(Theme.rounded(.subheadline, weight: .semibold))
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 9)
+                    .font(Theme.rounded(.footnote, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 7)
+                    .frame(minHeight: 44)
+                    .contentShape(.capsule)
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.capsule)

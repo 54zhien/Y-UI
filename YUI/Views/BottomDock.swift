@@ -11,7 +11,7 @@ struct BottomDock: View {
     private let controlSpacing: CGFloat = 8
 
     private var glassHeight: CGFloat {
-        containerSize.width < 380 ? 44 : 46
+        usesAccessibilityText ? 50 : 44
     }
 
     private var isNarrow: Bool {
@@ -26,6 +26,11 @@ struct BottomDock: View {
         !isNarrow && !usesAccessibilityText
     }
 
+    private var capsuleWidth: CGFloat {
+        if usesAccessibilityText { return 150 }
+        return isNarrow ? 112 : 132
+    }
+
     var body: some View {
         let corner = Theme.screenCornerRadius(for: containerSize)
 
@@ -33,17 +38,16 @@ struct BottomDock: View {
         let sideInset = max(8, min(alignmentInset, 30))
         let bottomInset = safeArea.bottom > 0 ? max(6, min(alignmentInset, 30)) : 14
 
-        let capsuleWidth = max(
-            0,
-            containerSize.width - sideInset * 2 - glassHeight * 2 - controlSpacing * 2
-        )
-
-        HStack(spacing: controlSpacing) {
+        HStack(spacing: 0) {
             circleButton(symbol: "gearshape", label: "设置") {
                 model.activeSheet = .settings
             }
 
+            Spacer(minLength: controlSpacing)
+
             warModeCapsule(width: capsuleWidth)
+
+            Spacer(minLength: controlSpacing)
 
             circleButton(symbol: "magnifyingglass", label: "搜索") {
                 model.activeSheet = .search
