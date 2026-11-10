@@ -2,10 +2,15 @@ import SwiftUI
 
 struct BottomDock: View {
 
-    let model: HomeModel
-    let containerSize: CGSize
-    var safeArea: EdgeInsets = EdgeInsets()
-
+    @Bindable var model: HomeModel
+    var containerSize: CGSize
+    var safeArea: EdgeInsets
+    var warNamespace: Namespace.ID
+    var searchNamespace: Namespace.ID
+    var searchHistory: SearchHistory
+    var onOpenWarMode: () -> Void = {}
+    var onOpenSettings: () -> Void = {}
+    @State private var didLongPress = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private let controlSpacing: CGFloat = 8
@@ -39,18 +44,35 @@ struct BottomDock: View {
         let bottomInset = safeArea.bottom > 0 ? max(6, min(alignmentInset, 30)) : 14
 
         HStack(spacing: 0) {
-            circleButton(symbol: "gearshape", label: "设置") {
-                model.activeSheet = .settings
+            circleButton(symbol: "gearshape", label: "设置", offsetX: gearOffset) {
+                onOpenSettings()
             }
+            .matchedTransitionSource(id: WarRoute.settingsSourceID, in: searchNamespace)
 
             Spacer(minLength: controlSpacing)
 
             warModeCapsule(width: capsuleWidth)
+                .matchedTransitionSource(id: WarRoute.warSourceID, in: warNamespace)
+                .offset(x: gearOffset)
 
             Spacer(minLength: controlSpacing)
 
-            circleButton(symbol: "magnifyingglass", label: "搜索") {
-                model.activeSheet = .search
+            if model.isSearchingHome {
+                SearchFieldBar(query: $model.homeQuery, placeholder: "搜索面板", history: searchHistory) {
+                    withAnimation(.snappy) {
+                        model.homeQuery = ""
+                        model.isSearchingHome = false
+                    }
+                }
+                .matchedGeometryEffect(id: "homeSearch", in: searchNamespace)
+            } else {
+                circleButton(symbol: "magnifyingglass", label: "搜索") {
+                    withAnimation(.snappy) {
+                        model.homeQuery = ""
+                        model.isSearchingHome = true
+                    }
+                }
+                .matchedGeometryEffect(id: "homeSearch", in: searchNamespace)
             }
         }
         .padding(.horizontal, sideInset)
@@ -58,9 +80,15 @@ struct BottomDock: View {
         .frame(maxWidth: .infinity)
     }
 
+    private var gearOffset: CGFloat {
+        model.isSearchingHome ? -containerSize.width * 0.62 : 0
+    }
+
     private func circleButton(
         symbol: String,
         label: String,
+        offsetX: CGFloat = 0,
+        isSettingsSource: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -70,6 +98,7 @@ struct BottomDock: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .offset(x: offsetX)
         .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel(label)
         .accessibilityHint("打开演示占位页面")
@@ -77,8 +106,12 @@ struct BottomDock: View {
 
     private func warModeCapsule(width: CGFloat) -> some View {
         Button {
-            withAnimation(.snappy) {
-                model.toggleWarMode()
+            if didLongPress {
+                didLongPress = false
+            } else {
+                withAnimation(.snappy) {
+                    model.toggleWarMode()
+                }
             }
         } label: {
             HStack(spacing: 6) {
@@ -106,7 +139,16 @@ struct BottomDock: View {
         .frame(width: width, height: glassHeight)
         .contentShape(.capsule)
         .glassEffect(warModeGlass, in: .capsule)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                didLongPress = true
+                onOpenWarMode()
+            }
+        )
         .accessibilityLabel("战争模式")
+        .accessibilityAction(named: Text("展开战争模式设置")) {
+            onOpenWarMode()
+        }
         .accessibilityValue(model.warModeEnabled ? "开" : "关")
         .accessibilityHint("切换战争模式演示状态，仅模拟，不改变真实网络或特效")
     }
@@ -116,47 +158,4 @@ struct BottomDock: View {
             ? .regular.tint(Color.orange.opacity(0.32)).interactive()
             : .regular.interactive()
     }
-}
-
-#Preview("常规") {
-    ZStack {
-        DiffuseBackground()
-        VStack {
-            Spacer()
-            BottomDock(
-                model: HomeModel(),
-                containerSize: CGSize(width: 402, height: 874),
-                safeArea: EdgeInsets(top: 59, leading: 0, bottom: 34, trailing: 0)
-            )
-        }
-    }
-}
-
-#Preview("窄屏") {
-    ZStack {
-        DiffuseBackground()
-        VStack {
-            Spacer()
-            BottomDock(
-                model: HomeModel(),
-                containerSize: CGSize(width: 375, height: 667),
-                safeArea: EdgeInsets(top: 20, leading: 0, bottom: 0, trailing: 0)
-            )
-        }
-    }
-}
-
-#Preview("辅助功能字号") {
-    ZStack {
-        DiffuseBackground()
-        VStack {
-            Spacer()
-            BottomDock(
-                model: HomeModel(),
-                containerSize: CGSize(width: 402, height: 874),
-                safeArea: EdgeInsets(top: 59, leading: 0, bottom: 34, trailing: 0)
-            )
-        }
-    }
-    .dynamicTypeSize(.accessibility3)
 }

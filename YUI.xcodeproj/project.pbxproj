@@ -17,6 +17,10 @@
 		B1000000000000000000000C = {isa = PBXBuildFile; fileRef = F1000000000000000000000C; };
 		B1000000000000000000000D = {isa = PBXBuildFile; fileRef = F1000000000000000000000D; };
 		B10000000000000000000022 = {isa = PBXBuildFile; fileRef = F10000000000000000000023; };
+		B10000000000000000000024 = {isa = PBXBuildFile; fileRef = F10000000000000000000024; };
+		B10000000000000000000025 = {isa = PBXBuildFile; fileRef = F10000000000000000000025; };
+		B10000000000000000000026 = {isa = PBXBuildFile; fileRef = F10000000000000000000026; };
+		B10000000000000000000027 = {isa = PBXBuildFile; fileRef = F10000000000000000000027; };
     B10000000000000000000021 = {isa = PBXBuildFile; fileRef = F10000000000000000000021; };
     E30000000000000000000001 = {
 isa = PBXContainerItemProxy;
@@ -44,6 +48,10 @@ targetProxy = E30000000000000000000001;
 		F1000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10000000000000000000023 = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		F10000000000000000000024 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarModeSettings.swift; sourceTree = "<group>"; };
+		F10000000000000000000025 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarModeView.swift; sourceTree = "<group>"; };
+		F10000000000000000000026 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchKit.swift; sourceTree = "<group>"; };
+		F10000000000000000000027 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDemoView.swift; sourceTree = "<group>"; };
     F10000000000000000000021 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YUIHomeUITests.swift; sourceTree = "<group>"; };
     F10000000000000000000022 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YUIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000002 = {
@@ -96,6 +104,7 @@ runOnlyForDeploymentPostprocessing = 0;
 			children = (
 				F10000000000000000000005,
 				F10000000000000000000006,
+				F10000000000000000000024,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -108,6 +117,9 @@ runOnlyForDeploymentPostprocessing = 0;
 				F1000000000000000000000A,
 				F1000000000000000000000B,
 				F1000000000000000000000C,
+				F10000000000000000000025,
+				F10000000000000000000026,
+				F10000000000000000000027,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -238,7 +250,11 @@ runOnlyForDeploymentPostprocessing = 0;
 				B1000000000000000000000A,
 				B1000000000000000000000B,
 				B1000000000000000000000C,
-			);
+							B10000000000000000000024,
+				B10000000000000000000025,
+				B10000000000000000000026,
+				B10000000000000000000027,
+);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
     C10000000000000000000004 = {

@@ -74,14 +74,14 @@ final class YUIHomeUITests: XCTestCase {
         app.buttons["战争模式"].waitForExistence(timeout: 8)
     }
 
-    func testManageModeExposesIndependentEditControlsAndReorders() {
+    func testManageModeKeepsDragReorderWithoutMoveButtons() {
         enterManageMode()
 
-        let moveUpFirst = app.buttons["上移主题"]
-        scrollUntilHittable(moveUpFirst, up: false, maxSwipes: 12)
-        XCTAssertTrue(app.buttons["隐藏主题"].exists, "管理模式下应有隐藏控件")
-        XCTAssertTrue(app.buttons["下移主题"].exists, "管理模式下应有下移控件")
-        XCTAssertFalse(moveUpFirst.isEnabled, "首项不应可上移")
+        let hideTheme = app.buttons["隐藏主题"]
+        scrollUntilHittable(hideTheme, up: false, maxSwipes: 12)
+        XCTAssertTrue(hideTheme.exists, "管理模式下应有隐藏控件")
+        XCTAssertFalse(app.buttons["上移主题"].exists, "不应再显示上移按钮")
+        XCTAssertFalse(app.buttons["下移主题"].exists, "不应再显示下移按钮")
         attach("edit-controls")
 
         app.staticTexts["主题"].firstMatch.tap()
@@ -90,18 +90,40 @@ final class YUIHomeUITests: XCTestCase {
             "编辑模式下点击卡片本体不应打开占位说明页"
         )
 
-        let moveDown = app.buttons["下移主题"]
-        XCTAssertTrue(moveDown.isHittable, "下移按钮应可点")
-        moveDown.tap()
-
-        let moveUpAppearance = app.buttons["上移外观"]
-        expectation(for: NSPredicate(format: "enabled == false"), evaluatedWith: moveUpAppearance)
-        waitForExpectations(timeout: 6)
+        let themeTitle = app.staticTexts["主题"].firstMatch
+        let appearanceTitle = app.staticTexts["外观"].firstMatch
+        let before = themeTitle.frame.minY
+        appearanceTitle.press(forDuration: 1.0, thenDragTo: themeTitle)
+        Thread.sleep(forTimeInterval: 0.8)
+        let after = themeTitle.frame.minY
+        XCTAssertNotEqual(before, after, "长按拖动后顺序应发生变化")
         attach("edit-reordered")
 
         exitManageMode()
     }
 
+    func testWarModeLongPressOpensSettingsAndSearchFilters() {
+        let capsule = app.buttons["战争模式"]
+        XCTAssertTrue(capsule.waitForExistence(timeout: 20))
+
+        capsule.press(forDuration: 0.9)
+        let title = app.staticTexts["战争模式"].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 10), "长按应展开战争模式设置页")
+        XCTAssertTrue(app.buttons["关闭战争模式设置"].exists, "设置页应有原生玻璃关闭按钮")
+        XCTAssertTrue(app.switches["社区"].exists, "设置页应列出联网与服务项目")
+
+        app.buttons["搜索项目"].tap()
+        let field = app.textFields["搜索项目"]
+        XCTAssertTrue(field.waitForExistence(timeout: 6), "应出现搜索输入框")
+        field.tap()
+        field.typeText("天气")
+        XCTAssertTrue(app.switches["天气"].waitForExistence(timeout: 6))
+        XCTAssertFalse(app.switches["社区"].exists, "搜索应过滤掉不匹配项目")
+
+        app.buttons["收起搜索"].tap()
+        app.buttons["关闭战争模式设置"].tap()
+        XCTAssertTrue(capsule.waitForExistence(timeout: 10), "关闭后应回到首页胶囊")
+    }
     func testHideAndRestorePanel() {
         enterManageMode()
 

@@ -12,6 +12,20 @@ final class HomeModel {
 
     var warModeEnabled: Bool = false
 
+    var isSearchingHome: Bool = false
+
+    var homeQuery: String = ""
+
+    var filteredPanels: [PanelItem] {
+        let trimmed = homeQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return panels }
+        return panels.filter {
+            $0.title.localizedCaseInsensitiveContains(trimmed)
+                || $0.value.localizedCaseInsensitiveContains(trimmed)
+                || $0.detail.localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
     var activeSheet: DemoSheetRoute?
 
     func toggleEditing() {

@@ -3,6 +3,11 @@ import SwiftUI
 struct HomeView: View {
 
     @State private var model = HomeModel()
+    @State private var warPath: [WarRoute] = []
+    @Namespace private var warNamespace
+    @Namespace private var searchNamespace
+    @State private var searchHistory = SearchHistory()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let dockReserve: CGFloat = 132
     private let edgeFade: CGFloat = 44
@@ -10,7 +15,8 @@ struct HomeView: View {
     var body: some View {
         @Bindable var model = model
 
-        GeometryReader { proxy in
+        NavigationStack(path: $warPath) {
+            GeometryReader { proxy in
             ZStack(alignment: .bottom) {
                 DiffuseBackground()
 
@@ -34,6 +40,8 @@ struct HomeView: View {
                     .padding(.bottom, dockReserve)
                 }
                 .scrollIndicators(.hidden)
+                .blur(radius: model.isSearchingHome ? 12 : 0)
+                .animation(.snappy, value: model.isSearchingHome)
                 .mask {
                     LinearGradient(
                         stops: [
@@ -47,15 +55,48 @@ struct HomeView: View {
                     )
                 }
 
-                BottomDock(model: model, containerSize: proxy.size, safeArea: proxy.safeAreaInsets)
+                BottomDock(
+                    model: model,
+                    containerSize: proxy.size,
+                    safeArea: proxy.safeAreaInsets,
+                    warNamespace: warNamespace,
+                    searchNamespace: searchNamespace,
+                    searchHistory: searchHistory,
+                    onOpenWarMode: { warPath.append(.war) },
+                    onOpenSettings: { warPath.append(.settings) }
+                )
             }
             .ignoresSafeArea(.container, edges: .bottom)
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: WarRoute.self) { route in
+                destination(for: route)
+            }
         }
         .sheet(item: $model.activeSheet) { route in
             DemoSheet(route: route)
         }
     }
 
+    @ViewBuilder
+    private func destination(for route: WarRoute) -> some View {
+        switch route {
+        case .war:
+            let view = WarModeView(model: model)
+            if reduceMotion {
+                view
+            } else {
+                view.navigationTransition(.zoom(sourceID: WarRoute.warSourceID, in: warNamespace))
+            }
+        case .settings:
+            let view = SettingsDemoView()
+            if reduceMotion {
+                view
+            } else {
+                view.navigationTransition(.zoom(sourceID: WarRoute.settingsSourceID, in: searchNamespace))
+            }
+        }
+    }
     private var manageButton: some View {
         HStack {
             Spacer()
@@ -99,4 +140,11 @@ struct HomeView: View {
 #Preview("大字号") {
     HomeView()
         .dynamicTypeSize(.xxxLarge)
+}
+
+enum WarRoute: Hashable {
+    case war
+    case settings
+    static let warSourceID = "warCapsule"
+    static let settingsSourceID = "gearButton"
 }

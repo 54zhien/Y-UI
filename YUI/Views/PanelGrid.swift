@@ -18,7 +18,7 @@ struct PanelGrid: View {
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(Array(model.panels.enumerated()), id: \.element.id) { index, item in
+            ForEach(Array(model.filteredPanels.enumerated()), id: \.element.id) { index, item in
                 PanelTile(
                     item: item,
                     model: model,
@@ -148,6 +148,16 @@ struct PanelTile: View {
                 .padding(4)
         }
         .accessibilityElement(children: .contain)
+        .accessibilityAction(named: Text("上移")) {
+            if model.canMoveUp(item) {
+                withAnimation(.snappy) { model.moveUp(item) }
+            }
+        }
+        .accessibilityAction(named: Text("下移")) {
+            if model.canMoveDown(item) {
+                withAnimation(.snappy) { model.moveDown(item) }
+            }
+        }
         .accessibilityLabel("\(item.title)面板，编辑中")
     }
 
@@ -184,17 +194,7 @@ struct PanelTile: View {
 
                 .padding(.trailing, showsEditRow ? controlReserve : 0)
 
-                if showsEditRow {
-                    HStack(spacing: 4) {
-                        Spacer(minLength: 0)
-                        editButton("chevron.up", label: "上移\(item.title)", enabled: model.canMoveUp(item)) {
-                            model.moveUp(item)
-                        }
-                        editButton("chevron.down", label: "下移\(item.title)", enabled: model.canMoveDown(item)) {
-                            model.moveDown(item)
-                        }
-                    }
-                }
+
             }
             .padding(14)
             .frame(
@@ -225,9 +225,12 @@ struct PanelTile: View {
             Image(systemName: symbol)
                 .font(.system(size: 12, weight: .bold))
                 .frame(width: 30, height: 30)
+                .background(Circle().fill(.regularMaterial))
+                .overlay {
+                    Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
+                }
         }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
+        .buttonStyle(.plain)
         .frame(width: 44, height: 44)
         .contentShape(Rectangle())
         .disabled(!enabled)
