@@ -42,17 +42,27 @@ print(phones[0]["udid"] if phones else "", narrow[0]["udid"] if narrow else "")
 PRIMARY="$(echo "$DEVICES" | awk '{print $1}')"
 NARROW="$(echo "$DEVICES" | awk '{print $2}')"
 
-# runner 上没有现成的 SE / mini 时，按设备类型临时建一台窄屏机（375pt 宽，
-# 用来触发 isNarrow 分支），用完不清理（runner 是临时的）。
+# runner 上没有现成的 SE / mini 时，按「受支持机型 + 当前 iOS 运行时」临时建一台
+# 375pt 宽的窄屏机（iPhone SE 第 3 代），用来触发 isNarrow 分支。runner 是临时环境，
+# 不额外清理。建机失败时静默跳过，不影响其余截图。
 if [ -z "$NARROW" ]; then
-  NARROW_TYPE="$(xcrun simctl list devicetypes | sed -n 's/.*com\.apple\.CoreSimulator\.SimDeviceType\.\(iPhone-SE[^)]*\).*/com.apple.CoreSimulator.SimDeviceType.\1/p' | tail -1)"
   NARROW_RUNTIME="$(xcrun simctl list runtimes | sed -n 's/.*com\.apple\.CoreSimulator\.SimRuntime\.\(iOS-[0-9-]*\).*/com.apple.CoreSimulator.SimRuntime.\1/p' | tail -1)"
-  echo "narrow type=${NARROW_TYPE:-none} runtime=${NARROW_RUNTIME:-none}"
-  if [ -n "$NARROW_TYPE" ] && [ -n "$NARROW_RUNTIME" ]; then
-    NARROW="$(xcrun simctl create "dsh-narrow" "$NARROW_TYPE" "$NARROW_RUNTIME" || true)"
-  fi
+  echo "narrow runtime: ${NARROW_RUNTIME:-none}"
+  for narrow_type in \
+    com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation \
+    com.apple.CoreSimulator.SimDeviceType.iPhone-13-mini; do
+    if [ -z "$NARROW_RUNTIME" ]; then break; fi
+    if ! xcrun simctl list devicetypes | grep -Fq "$narrow_type"; then continue; fi
+    created="$(xcrun simctl create dsh-narrow "$narrow_type" "$NARROW_RUNTIME" 2>&1 || true)"
+    if printf '%s' "$created" | grep -Eq '^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-'; then
+      NARROW="$created"
+      echo "created narrow simulator ${NARROW} from ${narrow_type}"
+      break
+    else
+      echo "create failed for ${narrow_type}: ${created}"
+    fi
+  done
 fi
-
 if [ -z "$PRIMARY" ]; then
   echo "no available iPhone simulator"
   exit 1
