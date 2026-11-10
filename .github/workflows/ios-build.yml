@@ -52,6 +52,11 @@ jobs:
         continue-on-error: true
         run: bash Scripts/ci-capture-screenshots.sh
 
+      # 真实交互验证：管理模式、上移/下移、隐藏/恢复、战争模式切换、滚到底管理按钮可点。
+      # 这一步失败视为任务失败，不吞掉错误。
+      - name: Run UI tests (interaction verification)
+        run: bash Scripts/ci-run-ui-tests.sh
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

@@ -54,6 +54,7 @@ HomeView
   因此**圆心对齐只是近似**：窄屏、无 Home Indicator 的机型、iPad 上会以不溢出和不压安全区优先。
 - **底栏自适应**：宽度 < 380pt 时控件由 56pt 收到 50pt、胶囊内边距收紧；
   辅助功能字号下胶囊只保留图标 + 开/关状态（VoiceOver 仍读出「战争模式」），避免三控件互相挤压。
+- **辅助功能字号**：动态字体 ≥ accessibility1 时面板网格改**单列**、卡片标题/数值/说明允许换行，键盘卡底部签名行改为上下排列，避免大字号截断。
 - **安全区域与遮挡**：滚动内容底部预留 132pt，底部悬浮控件不遮挡最后一张卡片与「管理」按钮。
 - **深浅色 / 动态字体 / 无障碍**：颜色取自语义色与自定义渐变；字体走 `Font.TextStyle` 体系；
   可点元素均有 label/value/hint；开启「减少动态效果」时编辑模式**不抖动**。
@@ -62,7 +63,7 @@ HomeView
 
 | 操作 | 行为 | 边界 |
 | --- | --- | --- |
-| 点面板卡片（非管理模式） | 弹出该面板的占位说明页 | 不读写任何偏好设置 |
+| 点面板卡片（非管理模式） | 弹出该面板的占位说明页 | 该模式下卡片本身就是一个 Button；编辑模式下卡片不再是 Button，点它不会打开说明页 |
 | 点「管理」 | 进入编辑模式：卡片轻微抖动，出现隐藏与上移/下移按钮 | 仅内存状态，不持久化 |
 | 管理模式下拖动卡片 | 本地重排面板顺序 | 非管理模式不挂拖动/放置，避免误触 |
 | 上移 / 下移按钮 | 本地重排（可用 VoiceOver 操作） | 首/末项自动禁用 |
@@ -106,11 +107,35 @@ xcodebuild -project YUI.xcodeproj -scheme YUI -configuration Debug \
 
 - CI 只能证明「工程可被 Xcode 26 编译、可安装到模拟器启动、可生成截图」；
 - CI **不能**证明与参考图的视觉一致、卡片材料观感、圆形控件圆心是否真的贴合圆角、
-  编辑模式抖动与排序手感、战争模式视觉反馈；
+  编辑模式抖动与排序手感；
 - 截图是供人工核对的素材，截图能上传不代表通过验收；
-- 交互路径（管理模式、抖动、排序、隐藏/恢复、战争模式切换）没有自动化测试覆盖。
+- 交互路径由第 7 节的 XCUITest 覆盖，但「手感/抖动幅度」这类主观项仍只能人工判断。
 
-## 7. 验证状态与限制
+## 7. 交互验证（XCUITest）
+
+`YUIUITests/YUIHomeUITests.swift` 在真实模拟器上驱动 App，不注入任何测试专用代码，只依赖界面已有的无障碍 label：
+
+| 用例 | 覆盖 |
+| --- | --- |
+| `testWarModeCapsuleTogglesState` | 点底部胶囊：关 → 开 → 关，断言 accessibilityValue |
+| `testNonEditingTileOpensDemoSheet` | 非编辑模式点面板卡片 → 打开占位说明页，关闭后回到首页 |
+| `testManageModeExposesIndependentEditControlsAndReorders` | 进管理模式；断言隐藏/上移/下移是独立可点控件；首项上移禁用；**编辑模式点卡片本体不会打开说明页**（嵌套 Button 回归守卫）；下移后顺序变化 |
+| `testHideAndRestorePanel` | 隐藏「主题」→ 出现「重新添加主题」→ 恢复后回到网格 |
+| `testManageButtonReachableAfterScrollingToBottom` | 一路滑到底，断言「管理」按钮 `isHittable`（不被底部悬浮控件遮挡） |
+
+运行方式：
+
+```bash
+xcodebuild test -project YUI.xcodeproj -scheme YUI \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -resultBundlePath artifacts/YUIUITests.xcresult
+```
+
+CI 里由 `Scripts/ci-run-ui-tests.sh` 执行，测试日志写 `artifacts/ui-tests.log`，
+结果包 `artifacts/YUIUITests.xcresult`，并尽力把截图附件导出到 `artifacts/ui-test-attachments/`。
+这一步失败即判整个 workflow 失败，不会用 `continue-on-error` 吞掉。
+
+## 8. 验证状态与限制
 
 | 项 | 状态 |
 | --- | --- |
@@ -118,20 +143,21 @@ xcodebuild -project YUI.xcodeproj -scheme YUI -configuration Debug \
 | Xcode / iOS SDK 构建 | 由 GitHub Actions `macos-26` 执行，结果见提交对应的 workflow run |
 | 模拟器运行与截图 | 同上；截图仅作素材，未做人工视觉验收 |
 | 与参考图的视觉比对 | **未做**：本机是 Windows，无模拟器/真机 |
-| 交互验证（排序 / 隐藏 / 恢复 / 抖动 / 战争模式） | **未做**：需要模拟器或真机手工验证 |
-| 辅助功能（VoiceOver、动态字体、减少动态效果） | 代码按无障碍语义编写，**未实机验证** |
+| 交互验证（排序 / 隐藏 / 恢复 / 战争模式 / 管理按钮可见性） | 由 XCUITest 在 CI 模拟器上执行，结果见对应 run 的 UI 测试步骤与 `artifacts/ui-tests.log` |
+| 抖动幅度、动效手感 | **未自动化**：只能人眼看 |
+| 辅助功能（VoiceOver、动态字体、减少动态效果） | 辅助字号布局已适配并有 CI 截图；VoiceOver 与「减少动态效果」仍**未实机验证** |
 
 其它限制：
 
 - 面板数据、统计数字（如「今天 118 字」）均为硬编码占位。
-- 没有单元测试 / UI 测试目标（按「仅前端演示」的范围未添加）。
 - AppIcon 为占位空资产，构建会有图标缺失告警，不影响编译。
 - 屏幕圆角对齐与底栏尺寸都用经验值，极端机型可能需要微调。
+- UI 测试只覆盖 iPhone 主流程，未覆盖 iPad、横屏、深浅色切换下的重复跑。
 
-## 8. 目录结构
+## 9. 目录结构
 
 ```
-YUI.xcodeproj/                 Xcode 工程（含共享 scheme）
+YUI.xcodeproj/                 Xcode 工程（含共享 scheme、UI 测试目标）
 YUI/
 ├─ YUIApp.swift                入口
 ├─ Design/
@@ -149,6 +175,10 @@ YUI/
 │  └─ DemoSheet.swift          占位说明页
 └─ Resources/
    └─ Assets.xcassets          AccentColor / AppIcon 占位
+YUIUITests/
+└─ YUIHomeUITests.swift        XCUITest：管理模式/排序/隐藏恢复/战争模式/管理按钮可见
 Scripts/ci-capture-screenshots.sh   CI 截图脚本
-.github/workflows/ios-build.yml     macOS 构建 + 截图工作流
+Scripts/ci-run-ui-tests.sh          CI 交互测试脚本
+.github/workflows/ios-build.yml     macOS 构建 + 截图 + UI 测试工作流
 ```
+

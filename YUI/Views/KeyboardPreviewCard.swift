@@ -11,6 +11,13 @@ import SwiftUI
 struct KeyboardPreviewCard: View {
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// 辅助功能字号下把卡片底部的「标题 / 跟随系统」改为上下排列并允许换行，
+    /// 避免大字号下被连字符拆断或截断。
+    private var usesStackedFooter: Bool {
+        dynamicTypeSize >= .accessibility1
+    }
 
     private let candidates = ["Y 键盘", "智能", "自己的键盘", "你好", "大"]
     private let symbolColumn = ["?", ",", "。", "!"]
@@ -30,21 +37,42 @@ struct KeyboardPreviewCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 keyboard
 
-                HStack(alignment: .firstTextBaseline) {
-                    Text("PureGlass")
-                        .font(Theme.rounded(.headline, weight: .bold))
-                    Spacer(minLength: 8)
-                    Text("跟随系统")
-                        .font(Theme.rounded(.footnote))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 2)
+                footer
             }
             .padding(16)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("键盘预览，静态演示")
         .accessibilityValue("候选栏：\(candidates.joined(separator: "、"))；九宫格字母键与符号键，不可输入")
+    }
+
+    // MARK: - 底部签名行
+
+    @ViewBuilder
+    private var footer: some View {
+        if usesStackedFooter {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("PureGlass")
+                    .font(Theme.rounded(.headline, weight: .bold))
+                Text("跟随系统")
+                    .font(Theme.rounded(.footnote))
+                    .foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 2)
+        } else {
+            HStack(alignment: .firstTextBaseline) {
+                Text("PureGlass")
+                    .font(Theme.rounded(.headline, weight: .bold))
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text("跟随系统")
+                    .font(Theme.rounded(.footnote))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 2)
+        }
     }
 
     // MARK: - 键盘主体

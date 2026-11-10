@@ -3,7 +3,11 @@
 //  YUI
 //
 //  两列面板入口网格 + 管理模式（抖动、拖动/上移下移排序、隐藏、重新添加）。
-//  拖动排序仅在管理模式下启用；数据只在内存里，退出应用即复原。
+//  结构约束：
+//  - 非管理模式：整张卡片是一个 Button（点开占位说明页）；
+//  - 管理模式：卡片本体不再是 Button，隐藏/上移/下移是各自独立的 Button，
+//    不存在 Button 嵌套 Button，也不靠 disabled 外层按钮来屏蔽点击。
+//  辅助功能字号下改为单列、文案允许换行；普通字号维持两列。
 //
 
 import SwiftUI
@@ -15,12 +19,18 @@ struct PanelGrid: View {
     let model: HomeModel
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var shakePhase: CGFloat = 0
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 12, alignment: .top),
-        GridItem(.flexible(), spacing: 12, alignment: .top)
-    ]
+    private var columns: [GridItem] {
+        if dynamicTypeSize >= .accessibility1 {
+            return [GridItem(.flexible(), spacing: 12, alignment: .top)]
+        }
+        return [
+            GridItem(.flexible(), spacing: 12, alignment: .top),
+            GridItem(.flexible(), spacing: 12, alignment: .top)
+        ]
+    }
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
@@ -109,36 +119,50 @@ struct PanelTile: View {
     let isEditing: Bool
     var shakePhase: CGFloat
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     /// 管理模式下给右上角隐藏按钮预留的宽度，避免遮挡标题与数值文字。
     private let controlReserve: CGFloat = 40
 
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Button {
-                if !isEditing {
-                    model.activeSheet = .panel(item)
-                }
-            } label: {
-                card
-            }
-            .buttonStyle(.plain)
-            .disabled(isEditing)
-            .accessibilityLabel("\(item.title)，\(item.value)，\(item.detail)")
-            .accessibilityHint(isEditing ? "编辑模式中，可用上移、下移或隐藏操作" : "打开演示占位说明")
+    private var wrapsText: Bool {
+        dynamicTypeSize >= .accessibility1
+    }
 
+    var body: some View {
+        Group {
             if isEditing {
-                hideButton
-                    .padding(4)
+                editableCard
+            } else {
+                Button {
+                    model.activeSheet = .panel(item)
+                } label: {
+                    cardContent(showsEditRow: false)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(item.title)，\(item.value)，\(item.detail)")
+                .accessibilityHint("打开演示占位说明")
             }
         }
         .modifier(ShakeEffect(animatableData: isEditing ? shakePhase : 0))
     }
 
-    // MARK: 卡片
+    // MARK: 管理模式：卡片本体 + 独立控件
 
-    private var card: some View {
+    private var editableCard: some View {
+        ZStack(alignment: .topTrailing) {
+            cardContent(showsEditRow: true)
+            hideButton
+                .padding(4)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(item.title)面板，编辑中")
+    }
+
+    // MARK: 卡片内容（不含任何按钮逻辑）
+
+    private func cardContent(showsEditRow: Bool) -> some View {
         GlassCard {
-            VStack(alignment: .leading, spacing: isEditing ? 8 : 0) {
+            VStack(alignment: .leading, spacing: showsEditRow ? 8 : 0) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: item.symbol)
                         .font(.system(size: 17, weight: .medium))
@@ -148,22 +172,23 @@ struct PanelTile: View {
                         Text(item.title)
                             .font(Theme.rounded(.caption, weight: .medium))
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(wrapsText ? nil : 1)
                         Text(item.value)
                             .font(Theme.rounded(.headline, weight: .bold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .lineLimit(wrapsText ? nil : 1)
+                            .minimumScaleFactor(wrapsText ? 1 : 0.8)
                         Text(item.detail)
                             .font(Theme.rounded(.caption2))
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(wrapsText ? nil : 1)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
 
                     Spacer(minLength: 0)
                 }
-                .padding(.trailing, isEditing ? controlReserve : 0)
+                .padding(.trailing, showsEditRow ? controlReserve : 0)
 
-                if isEditing {
+                if showsEditRow {
                     HStack(spacing: 4) {
                         Spacer(minLength: 0)
                         editButton("chevron.up", label: "上移\(item.title)", enabled: model.canMoveUp(item)) {
@@ -178,13 +203,13 @@ struct PanelTile: View {
             .padding(14)
             .frame(
                 maxWidth: .infinity,
-                minHeight: isEditing ? nil : 92,
+                minHeight: showsEditRow ? nil : 92,
                 alignment: .topLeading
             )
         }
     }
 
-    // MARK: 编辑控件
+    // MARK: 编辑控件（独立按钮）
 
     private var hideButton: some View {
         editButton("eye.slash", label: "隐藏\(item.title)") {
