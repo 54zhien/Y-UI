@@ -17,7 +17,7 @@ OUT_DIR="artifacts"
 mkdir -p "$OUT_DIR"
 
 if [ ! -d "$APP_PATH" ]; then
-  echo "找不到构建产物：$APP_PATH"
+  echo "built app not found: ${APP_PATH}"
   exit 1
 fi
 
@@ -43,12 +43,12 @@ PRIMARY="$(echo "$DEVICES" | awk '{print $1}')"
 NARROW="$(echo "$DEVICES" | awk '{print $2}')"
 
 if [ -z "$PRIMARY" ]; then
-  echo "没有可用的 iPhone 模拟器"
+  echo "no available iPhone simulator"
   exit 1
 fi
 
-echo "主模拟器：$PRIMARY"
-echo "窄屏模拟器：${NARROW:-（无）}"
+echo "primary simulator: ${PRIMARY}"
+echo "narrow simulator: ${NARROW:-none}"
 
 capture() {
   local udid="$1"
@@ -56,13 +56,13 @@ capture() {
   local content_size="$3"
   local name="$4"
 
-  echo "== 截图：$name（appearance=$appearance, content_size=${content_size:-默认}）=="
+  echo "== capture ${name}: appearance=${appearance} content_size=${content_size:-default} =="
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b
   xcrun simctl install "$udid" "$APP_PATH"
 
   if [ -n "$content_size" ]; then
-    xcrun simctl ui "$udid" content_size "$content_size" || echo "content_size 设置不生效，按默认字号截图"
+    xcrun simctl ui "$udid" content_size "$content_size" || echo "content_size not applied; using default text size"
   fi
 
   xcrun simctl ui "$udid" appearance "$appearance"
@@ -79,7 +79,7 @@ capture "$PRIMARY" light "accessibility-extra-extra-extra-large" "home-a11y-xxxl
 if [ -n "$NARROW" ]; then
   capture "$NARROW" light "" "home-narrow-light"
 else
-  echo "没有窄屏机型，跳过 home-narrow-light"
+  echo "no narrow iPhone available; skipping home-narrow-light"
 fi
 
 ls -l "$OUT_DIR"
