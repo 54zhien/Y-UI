@@ -2,32 +2,47 @@
 //  GlassCard.swift
 //  YUI
 //
-//  系统普通半透明 Material 玻璃卡片。按需求刻意使用 Material，
-//  不使用 Liquid Glass，以便和底部悬浮的玻璃控件区分层级。
+//  卡片容器，提供两种材质：
+//  - .material：系统普通半透明 Material（键盘预览卡、示例说明卡）；
+//  - .liquid：Liquid Glass 外观（首页面板）。只使用玻璃材质本身，不调用
+//    `.interactive()`，所以按下没有液态回弹/放大，只是外观是玻璃。
 //
 
 import SwiftUI
 
+enum GlassCardStyle {
+    case material
+    case liquid
+}
+
 struct GlassCard<Content: View>: View {
 
+    var style: GlassCardStyle = .material
     var cornerRadius: CGFloat = Theme.cardCornerRadius
     @ViewBuilder var content: Content
 
     @Environment(\.colorScheme) private var colorScheme
 
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+    }
+
+    @ViewBuilder
     var body: some View {
-        content
-            .background(
-                .regularMaterial,
-                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
+        switch style {
+        case .material:
+            content
+                .background(.regularMaterial, in: shape)
+                .overlay {
+                    shape.strokeBorder(
                         .white.opacity(colorScheme == .dark ? 0.10 : 0.35),
                         lineWidth: 0.8
                     )
-            }
+                }
+        case .liquid:
+            content
+                .glassEffect(.regular, in: shape)
+        }
     }
 }
 

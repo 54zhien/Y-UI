@@ -25,7 +25,7 @@ HomeView
    ├─ SectionHeader("当前键盘")             页面第一块内容
    ├─ KeyboardPreviewCard                  静态九宫格 + 候选栏 + PureGlass / 跟随系统
    ├─ SectionHeader("你的设置")
-   ├─ PanelGrid                            两列 Material 玻璃卡片，10 个面板入口
+   ├─ PanelGrid                            两列液态玻璃外观面板（无回弹），10 个入口
    │  └─ PanelTile                         仅管理模式：抖动 + 隐藏 + 上移/下移 + 拖动排序
    ├─ HiddenPanelsBar                      仅编辑模式出现，点 + 重新添加
    ├─ DemoNoteCard                         示例说明（占位声明）
@@ -42,18 +42,20 @@ HomeView
 
 ## 3. 设计与材料
 
-- **卡片材料**：系统普通半透明 Material（`.regularMaterial` + 细描边），刻意**不使用** Liquid Glass，
-  使内容卡片与底部悬浮控件形成明确的层级对比；两者不是同一种材质。
-- **玻璃控件**：底部圆形按钮使用系统玻璃按钮样式 `.buttonStyle(.glass)` + `.buttonBorderShape(.circle)`；
-  战争模式胶囊用 `.glassEffect(_:in: .capsule)`（`Glass.regular[.tint]().interactive()`），
-  并用 `GlassEffectContainer` 让同一区域内的玻璃形状彼此融合。内容区域**没有**使用液态玻璃。
+- **卡片材质分两种**：首页 10 个面板用 **Liquid Glass 外观**（`.glassEffect(.regular, in:)`，
+  **不调用** `.interactive()`，所以按下去没有液态回弹/放大）；键盘预览卡与示例说明卡仍用
+  系统普通半透明 Material（`.regularMaterial` + 细描边），保留材质层级差。
+- **底部控件**：圆形按钮用 `.buttonStyle(.glass)` + `.buttonBorderShape(.circle)`；战争模式胶囊用
+  `.glassEffect(... .interactive(), in: .capsule)`（这里是按钮，保留系统交互反馈），
+  两者用 `GlassEffectContainer` 让相邻玻璃形状融合。
 - **图标**：全部 SF Symbols，无自绘位图图标。
 - **渐变**：`MeshGradient`（3×3 控制点），无接缝、无私有 API；开启「降低透明度」时退化为同色系纯色底。
 - **底部圆心对齐**：公开 API 不提供屏幕圆角半径，`Theme.screenCornerRadius(for:)` 按屏宽给出经验值，
   圆形控件用「圆角近似值 − 控件半径」作为内边距，并把结果夹紧到 8…30pt，
   因此**圆心对齐只是近似**：窄屏、无 Home Indicator 的机型、iPad 上会以不溢出和不压安全区优先。
-- **底栏自适应**：宽度 < 380pt 时控件由 56pt 收到 50pt、胶囊内边距收紧；
-  辅助功能字号下胶囊只保留图标 + 开/关状态（VoiceOver 仍读出「战争模式」），避免三控件互相挤压。
+- **底栏尺寸与间距（按 HIG）**：左右圆钮 44–46pt（HIG 最小触控目标 44×44pt，不再放大到 56pt），
+  三控件统一 8pt 间距，中间战争模式胶囊**撑满**两侧剩余宽度，整条栏读起来是一条导航栏；
+  辅助功能字号下胶囊只保留图标 + 开/关状态（VoiceOver 仍读出「战争模式」）。
 - **辅助功能字号**：动态字体 ≥ accessibility1 时面板网格改**单列**、卡片标题/数值/说明允许换行，键盘卡底部签名行改为上下排列，避免大字号截断。
 - **安全区域与遮挡**：滚动内容底部预留 132pt，底部悬浮控件不遮挡最后一张卡片与「管理」按钮。
 - **深浅色 / 动态字体 / 无障碍**：颜色取自语义色与自定义渐变；字体走 `Font.TextStyle` 体系；

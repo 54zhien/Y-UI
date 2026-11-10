@@ -2,10 +2,15 @@
 //  BottomDock.swift
 //  YUI
 //
-//  底部悬浮控件：左设置圆形按钮、中间战争模式胶囊、右搜索圆形按钮。
+//  底部悬浮控件（相当于一条导航栏）：左设置圆钮、中间战争模式胶囊、右搜索圆钮。
+//
+//  尺寸与间距依据 Apple HIG：
+//  - 触控目标不小于 44×44pt，因此圆形控件取 44–46pt，不再放大到 56pt；
+//  - 三个控件按同一条导航栏排布，间距统一 8pt（HIG 未给硬数字，8pt 是系统级常用值），
+//    中间胶囊撑满两侧剩余宽度，不再用大段 Spacer 把它们拉开。
+//
 //  圆形控件的圆心尽量对齐屏幕底部圆角圆心：内边距取「圆角近似值 − 控件半径」，
-//  再按安全区域与窄屏做夹紧，保证三控件不溢出、不压安全区。
-//  玻璃效果使用系统 Liquid Glass API（buttonStyle(.glass) / glassEffect）。
+//  再按安全区域与窄屏夹紧。玻璃效果使用系统 Liquid Glass API。
 //
 
 import SwiftUI
@@ -18,9 +23,17 @@ struct BottomDock: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    /// 控件之间与控件内部的统一间距（8pt，系统级常用值，HIG 未给硬性数字）。
+    private let controlSpacing: CGFloat = 8
+
     // MARK: - 尺寸策略
 
-    /// 窄屏收小控件，给三控件留出余量。
+    /// 窄屏用 44pt（HIG 最小触控目标），常规屏 46pt。
+    private var controlHeight: CGFloat {
+        containerSize.width < 380 ? 44 : 46
+    }
+
+    /// 窄屏收小左右内边距，给三控件留出余量。
     private var isNarrow: Bool {
         containerSize.width < 380
     }
@@ -34,10 +47,6 @@ struct BottomDock: View {
         !isNarrow && !usesAccessibilityText
     }
 
-    private var controlHeight: CGFloat {
-        isNarrow ? 50 : 56
-    }
-
     // MARK: - 主体
 
     var body: some View {
@@ -47,24 +56,18 @@ struct BottomDock: View {
         let sideInset = max(8, min(alignmentInset, 30))
         let bottomInset = safeArea.bottom > 0 ? max(6, min(alignmentInset, 30)) : 14
 
-        GlassEffectContainer(spacing: 10) {
-            HStack(spacing: 8) {
+        GlassEffectContainer(spacing: controlSpacing) {
+            HStack(spacing: controlSpacing) {
                 circleButton(symbol: "gearshape", label: "设置") {
                     model.activeSheet = .settings
                 }
-                .layoutPriority(1)
-
-                Spacer(minLength: 6)
 
                 warModeCapsule
-                    .layoutPriority(2)
-
-                Spacer(minLength: 6)
+                    .frame(maxWidth: .infinity)
 
                 circleButton(symbol: "magnifyingglass", label: "搜索") {
                     model.activeSheet = .search
                 }
-                .layoutPriority(1)
             }
             .padding(.horizontal, sideInset)
             .padding(.bottom, bottomInset)
@@ -72,7 +75,7 @@ struct BottomDock: View {
         }
     }
 
-    // MARK: - 圆形按钮
+    // MARK: - 圆形按钮（44–46pt 触控目标）
 
     private func circleButton(
         symbol: String,
@@ -81,7 +84,7 @@ struct BottomDock: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: controlHeight < 56 ? 18 : 20, weight: .medium))
+                .font(.system(size: 17, weight: .medium))
                 .frame(width: controlHeight, height: controlHeight)
         }
         .buttonStyle(.glass)
@@ -90,7 +93,7 @@ struct BottomDock: View {
         .accessibilityHint("打开演示占位页面")
     }
 
-    // MARK: - 战争模式胶囊
+    // MARK: - 战争模式胶囊（撑满两侧剩余宽度）
 
     private var warModeCapsule: some View {
         Button {
@@ -100,7 +103,7 @@ struct BottomDock: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: model.warModeEnabled ? "shield.lefthalf.filled" : "shield")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
 
                 if showsCapsuleTitle {
                     Text("战争模式")
@@ -115,9 +118,9 @@ struct BottomDock: View {
                     .lineLimit(1)
                     .contentTransition(.opacity)
             }
-            .padding(.horizontal, isNarrow ? 14 : 18)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
             .frame(height: controlHeight)
-            .frame(minWidth: showsCapsuleTitle ? 128 : 88)
         }
         .buttonStyle(.plain)
         .glassEffect(warModeGlass, in: .capsule)
@@ -159,4 +162,19 @@ struct BottomDock: View {
             )
         }
     }
+}
+
+#Preview("辅助功能字号") {
+    ZStack {
+        DiffuseBackground()
+        VStack {
+            Spacer()
+            BottomDock(
+                model: HomeModel(),
+                containerSize: CGSize(width: 402, height: 874),
+                safeArea: EdgeInsets(top: 59, leading: 0, bottom: 34, trailing: 0)
+            )
+        }
+    }
+    .dynamicTypeSize(.accessibility3)
 }

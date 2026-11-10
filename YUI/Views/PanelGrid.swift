@@ -161,7 +161,7 @@ struct PanelTile: View {
     // MARK: 卡片内容（不含任何按钮逻辑）
 
     private func cardContent(showsEditRow: Bool) -> some View {
-        GlassCard {
+        GlassCard(style: .liquid) {
             VStack(alignment: .leading, spacing: showsEditRow ? 8 : 0) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: item.symbol)
