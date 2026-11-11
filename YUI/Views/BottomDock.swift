@@ -25,7 +25,7 @@ struct BottomDock: View {
 
     private var capsuleWidth: CGFloat {
         let available = containerSize.width - sideInset * 2 - Theme.controlSize * 2 - spacing * 2
-        return min(max(available * 0.4, 100), 148)
+        return max(available, 96)
     }
 
     var body: some View {
@@ -57,17 +57,13 @@ struct BottomDock: View {
     }
 
     private var dockRow: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: spacing) {
             circle(symbol: "gearshape", label: "设置") {
                 onOpenSettings()
             }
             .matchedTransitionSource(id: WarRoute.settingsSourceID, in: warNamespace)
 
-            Spacer(minLength: spacing)
-
             warCapsule
-
-            Spacer(minLength: spacing)
 
             circle(symbol: "magnifyingglass", label: "搜索") {
                 withAnimation(.snappy(duration: 0.34)) {
