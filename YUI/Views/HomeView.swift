@@ -93,7 +93,7 @@ struct HomeView: View {
         }
     }
 
-    private func scroll(reader: ScrollViewReader) -> some View {
+    private func scroll(reader: ScrollViewProxy) -> some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 18) {
                 Color.clear
