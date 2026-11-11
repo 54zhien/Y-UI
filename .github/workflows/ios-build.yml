@@ -10,6 +10,10 @@ on:
         description: build and UI tests only
         type: boolean
         default: false
+      ipa_only:
+        description: build and unsigned IPA only
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-build-${{ github.ref }}
@@ -52,20 +56,21 @@ jobs:
           if-no-files-found: warn
 
       - name: Capture simulator screenshots (light / dark)
-        if: inputs.quick != true
+        if: inputs.quick != true && inputs.ipa_only != true
         continue-on-error: true
         run: bash Scripts/ci-capture-screenshots.sh
 
       - name: Capture app icon appearance
-        if: inputs.quick != true
+        if: inputs.quick != true && inputs.ipa_only != true
         continue-on-error: true
         run: bash Scripts/ci-capture-icon.sh
 
       - name: Run UI tests (interaction verification)
+        if: inputs.ipa_only != true
         run: bash Scripts/ci-run-ui-tests.sh
 
       - name: Upload screenshots
-        if: always() && inputs.quick != true
+        if: always() && inputs.quick != true && inputs.ipa_only != true
         uses: actions/upload-artifact@v4
         with:
           name: simulator-screenshots
@@ -77,7 +82,7 @@ jobs:
         run: bash Scripts/ci-build-unsigned-ipa.sh
 
       - name: Upload unsigned IPA
-        if: always() && inputs.quick != true
+        if: always() && inputs.quick != true && inputs.ipa_only != true
         uses: actions/upload-artifact@v4
         with:
           name: unsigned-ipa

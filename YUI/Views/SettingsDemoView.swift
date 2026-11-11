@@ -5,7 +5,6 @@ struct SettingsDemoView: View {
     @State private var history = SearchHistory(seed: ["外观", "输入", "词库"])
     @State private var query = ""
     @State private var isSearching = false
-    @Namespace private var searchNamespace
     @Environment(\.dismiss) private var dismiss
 
     private let placeholders: [WarModeItem] = [
@@ -30,7 +29,7 @@ struct SettingsDemoView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    group {
+                    container {
                         ForEach(Array(filtered.enumerated()), id: \.element.id) { index, item in
                             row(item)
                             if index < filtered.count - 1 {
@@ -47,20 +46,38 @@ struct SettingsDemoView: View {
                             .padding(.top, 24)
                     }
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 10)
-                .padding(.bottom, 96)
+                .padding(.horizontal, Theme.screenPadding)
+                .padding(.top, 12)
+                .padding(.bottom, 48)
             }
             .scrollIndicators(.hidden)
+            .blur(radius: isSearching ? 16 : 0)
+            .animation(.snappy(duration: 0.26), value: isSearching)
         }
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .top, spacing: 0) { header }
+        .overlay(alignment: .top) {
+            EdgeFade(edge: .top)
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if isSearching {
-                SearchFieldBar(query: $query, placeholder: "搜索设置", history: history) {
-                    withAnimation(.snappy) { isSearching = false }
-                }
-                .matchedGeometryEffect(id: "settingsSearch", in: searchNamespace)
+                LiquidSearchBar(
+                    text: $query,
+                    placeholder: "搜索设置",
+                    history: history,
+                    onExit: {
+                        withAnimation(.snappy) {
+                            isSearching = false
+                            query = ""
+                        }
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if !isSearching {
+                EdgeFade(edge: .bottom)
             }
         }
     }
@@ -72,39 +89,34 @@ struct SettingsDemoView: View {
                 .accessibilityAddTraits(.isHeader)
 
             HStack {
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(width: 40, height: 40)
-                        .contentShape(Circle())
+                glassCircle(symbol: "xmark", label: "关闭设置") {
+                    dismiss()
                 }
-                .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .circle)
-                .accessibilityLabel("关闭设置")
-
                 Spacer()
-
                 if !isSearching {
-                    Button {
+                    glassCircle(symbol: "magnifyingglass", label: "搜索设置") {
                         withAnimation(.snappy) { isSearching = true }
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 15, weight: .semibold))
-                            .frame(width: 40, height: 40)
-                            .contentShape(Circle())
                     }
-                    .buttonStyle(.plain)
-                    .glassEffect(.regular.interactive(), in: .circle)
-                    .matchedGeometryEffect(id: "settingsSearch", in: searchNamespace)
-                    .accessibilityLabel("搜索设置")
                 }
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, Theme.screenPadding)
         .padding(.vertical, 6)
     }
 
-    private func group<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    private func glassCircle(symbol: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: Theme.controlSize, height: Theme.controlSize)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel(label)
+    }
+
+    private func container<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(spacing: 0) { content() }
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)

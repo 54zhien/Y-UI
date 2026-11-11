@@ -2,6 +2,14 @@ import SwiftUI
 
 enum Theme {
 
+    static let controlSize: CGFloat = 56
+
+    static let minHitSize: CGFloat = 44
+
+    static let fadeHeight: CGFloat = 96
+
+    static let screenPadding: CGFloat = 18
+
     static let cardCornerRadius: CGFloat = 26
 
     static let panelCornerRadius: CGFloat = 28

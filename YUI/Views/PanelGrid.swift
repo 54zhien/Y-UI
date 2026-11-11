@@ -1,10 +1,12 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PanelGrid: View {
 
     let model: HomeModel
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var dragging: PanelItem?
 
     private var columns: [GridItem] {
         if dynamicTypeSize >= .accessibility1 {
@@ -18,58 +20,47 @@ struct PanelGrid: View {
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(Array(model.filteredPanels.enumerated()), id: \.element.id) { index, item in
-                PanelTile(
-                    item: item,
-                    model: model,
-                    isEditing: model.isEditing,
-                    swayIndex: index
-                )
-                .modifier(
-                    EditOnlyReorder(enabled: model.isEditing, payload: item.id) { identifiers in
-                        handleDrop(identifiers, onto: item)
+            ForEach(model.filteredPanels) { item in
+                PanelTile(item: item, model: model, isEditing: model.isEditing)
+                    .onDrag {
+                        dragging = item
+                        return NSItemProvider(object: item.id as NSString)
                     }
-                )
+                    .onDrop(
+                        of: [UTType.text],
+                        delegate: PanelDropDelegate(model: model, item: item, dragging: $dragging)
+                    )
             }
         }
         .animation(.snappy, value: model.panels)
     }
-
-    private func handleDrop(_ identifiers: [String], onto target: PanelItem) -> Bool {
-        guard
-            let identifier = identifiers.first,
-            let source = model.panels.firstIndex(where: { $0.id == identifier }),
-            let destination = model.panels.firstIndex(where: { $0.id == target.id }),
-            source != destination
-        else {
-            return false
-        }
-        withAnimation(.snappy) {
-            model.move(from: source, to: destination)
-        }
-        return true
-    }
-
-
 }
 
-struct EditOnlyReorder: ViewModifier {
+struct PanelDropDelegate: DropDelegate {
 
-    let enabled: Bool
-    let payload: String
-    let onDrop: ([String]) -> Bool
+    let model: HomeModel
+    let item: PanelItem
+    @Binding var dragging: PanelItem?
 
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if enabled {
-            content
-                .draggable(payload)
-                .dropDestination(for: String.self) { identifiers, _ -> Bool in
-                    onDrop(identifiers)
-                }
-        } else {
-            content
+    func dropEntered(info: DropInfo) {
+        guard let dragging,
+              dragging.id != item.id,
+              let from = model.panels.firstIndex(where: { $0.id == dragging.id }),
+              let to = model.panels.firstIndex(where: { $0.id == item.id })
+        else { return }
+
+        withAnimation(.snappy) {
+            model.move(from: from, to: to)
         }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
     }
 }
 
@@ -78,13 +69,10 @@ struct PanelTile: View {
     let item: PanelItem
     let model: HomeModel
     let isEditing: Bool
-    let swayIndex: Int
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var swayForward = false
 
-    private let controlReserve: CGFloat = 40
+    private let controlReserve: CGFloat = 44
 
     private var wrapsText: Bool {
         dynamicTypeSize >= .accessibility1
@@ -105,47 +93,13 @@ struct PanelTile: View {
                 .accessibilityHint("打开演示占位说明")
             }
         }
-        .rotationEffect(.degrees(swayDegrees))
-        .animation(swayAnimation, value: swayForward)
-        .onChange(of: isEditing) { _, editing in
-            if editing, !reduceMotion {
-                swayForward.toggle()
-            } else {
-                swayForward = false
-            }
-        }
-        .onAppear {
-            if isEditing, !reduceMotion {
-                swayForward = swayIndex % 2 == 0
-            }
-        }
-    }
-
-    private var swayDegrees: Double {
-        guard isEditing else { return 0 }
-        return swayForward ? swayAmplitude : -swayAmplitude
-    }
-
-    private var swayAmplitude: Double {
-        0.42 + Double(swayIndex % 3) * 0.12
-    }
-
-    private var swayDuration: Double {
-        0.92 + Double(swayIndex % 4) * 0.21
-    }
-
-    private var swayAnimation: Animation? {
-        guard isEditing, !reduceMotion else { return nil }
-        return .easeInOut(duration: swayDuration)
-            .repeatForever(autoreverses: true)
-            .delay(Double(swayIndex % 5) * 0.08)
     }
 
     private var editableCard: some View {
         ZStack(alignment: .topTrailing) {
             cardContent(showsEditRow: true)
             hideButton
-                .padding(4)
+                .padding(6)
         }
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: Text("上移")) {
@@ -158,84 +112,61 @@ struct PanelTile: View {
                 withAnimation(.snappy) { model.moveDown(item) }
             }
         }
-        .accessibilityLabel("\(item.title)面板，编辑中")
-    }
-
-    private func cardContent(showsEditRow: Bool) -> some View {
-        GlassCard(style: .liquid) {
-            VStack(alignment: .leading, spacing: showsEditRow ? 8 : 0) {
-                VStack(alignment: .leading, spacing: 4) {
-
-                    HStack(spacing: 8) {
-                        Image(systemName: item.symbol)
-                            .font(.system(size: 17, weight: .medium))
-                            .frame(width: 22, height: 22)
-                            .accessibilityHidden(true)
-
-                        Text(item.title)
-                            .font(Theme.rounded(.caption, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(wrapsText ? nil : 1)
-
-                        Spacer(minLength: 0)
-                    }
-
-                    Text(item.value)
-                        .font(Theme.rounded(.headline, weight: .bold))
-                        .lineLimit(wrapsText ? nil : 1)
-                        .minimumScaleFactor(wrapsText ? 1 : 0.8)
-                    Text(item.detail)
-                        .font(Theme.rounded(.caption2))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(wrapsText ? nil : 1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-
-                .padding(.trailing, showsEditRow ? controlReserve : 0)
-
-
-            }
-            .padding(14)
-            .frame(
-                maxWidth: .infinity,
-                minHeight: showsEditRow ? nil : 92,
-                alignment: .topLeading
-            )
+        .accessibilityAction(named: Text("隐藏面板")) {
+            withAnimation(.snappy) { model.hide(item) }
         }
     }
 
     private var hideButton: some View {
-        editButton("eye.slash", label: "隐藏\(item.title)") {
-            model.hide(item)
-        }
-    }
-
-    private func editButton(
-        _ symbol: String,
-        label: String,
-        enabled: Bool = true,
-        action: @escaping () -> Void
-    ) -> some View {
         Button {
-            withAnimation(.snappy) {
-                action()
-            }
+            withAnimation(.snappy) { model.hide(item) }
         } label: {
-            Image(systemName: symbol)
-                .font(.system(size: 12, weight: .bold))
-                .frame(width: 30, height: 30)
-                .background(Circle().fill(.regularMaterial))
+            Image(systemName: "minus")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 32, height: 32)
+                .background(.regularMaterial, in: Circle())
                 .overlay {
-                    Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
+                    Circle().strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
                 }
         }
         .buttonStyle(.plain)
-        .frame(width: 44, height: 44)
-        .contentShape(Rectangle())
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.4)
-        .accessibilityLabel(label)
+        .frame(width: Theme.minHitSize, height: Theme.minHitSize)
+        .contentShape(Circle())
+        .accessibilityLabel("隐藏\(item.title)")
+    }
+
+    private func cardContent(showsEditRow: Bool) -> some View {
+        GlassCard(style: .liquid, cornerRadius: Theme.panelCornerRadius) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: item.symbol)
+                        .font(.system(size: 17, weight: .medium))
+                        .frame(width: 22, height: 22)
+                    Text(item.title)
+                        .font(Theme.rounded(.caption, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(wrapsText ? 2 : 1)
+                    Spacer(minLength: 0)
+                }
+                .padding(.trailing, showsEditRow ? controlReserve : 0)
+
+                Text(item.value)
+                    .font(Theme.rounded(.headline, weight: .semibold))
+                    .lineLimit(wrapsText ? 3 : 1)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(item.detail)
+                    .font(Theme.rounded(.caption2))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(wrapsText ? 3 : 1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
@@ -245,48 +176,50 @@ struct HiddenPanelsBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeader("已隐藏")
+            Text("已隐藏")
+                .font(Theme.rounded(.footnote, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
 
-            if model.hiddenPanels.isEmpty {
-                Text("没有隐藏的面板")
-                    .font(Theme.rounded(.footnote))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 4)
-            } else {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        ForEach(model.hiddenPanels) { item in
-                            Button {
-                                withAnimation(.snappy) {
-                                    model.restore(item)
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 11, weight: .bold))
-                                    Text(item.title)
-                                        .font(Theme.rounded(.footnote, weight: .medium))
-                                        .lineLimit(1)
-                                }
+            VStack(spacing: 0) {
+                ForEach(Array(model.hiddenPanels.enumerated()), id: \.element.id) { index, item in
+                    HStack(spacing: 10) {
+                        Image(systemName: item.symbol)
+                            .font(.system(size: 15, weight: .medium))
+                            .frame(width: 22)
+                        Text(item.title)
+                            .font(Theme.rounded(.subheadline))
+                        Spacer(minLength: 8)
+                        Button {
+                            withAnimation(.snappy) { model.restore(item) }
+                        } label: {
+                            Text("恢复")
+                                .font(Theme.rounded(.caption, weight: .semibold))
                                 .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                            }
-                            .buttonStyle(.glass)
-                            .buttonBorderShape(.capsule)
-                            .accessibilityLabel("重新添加\(item.title)")
+                                .frame(height: 32)
+                                .contentShape(.capsule)
                         }
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .accessibilityLabel("重新添加\(item.title)")
                     }
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 2)
-                }
-                .scrollIndicators(.hidden)
-            }
-        }
-    }
-}
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
 
-#Preview("网格") {
-    ScrollView {
-        PanelGrid(model: HomeModel()).padding()
+                    if index < model.hiddenPanels.count - 1 {
+                        Divider().padding(.leading, 46)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.regularMaterial)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+        }
     }
 }

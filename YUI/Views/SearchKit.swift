@@ -24,81 +24,34 @@ final class SearchHistory {
     }
 }
 
-struct SearchFieldBar: View {
+struct SearchHistoryRow: View {
 
-    @Binding var query: String
-    let placeholder: String
     let history: SearchHistory
-    let onExit: () -> Void
+    @Binding var query: String
 
     var body: some View {
-        VStack(spacing: 8) {
-            if !history.items.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(history.items, id: \.self) { term in
-                            chip(term)
-                        }
-                    }
-                    .padding(.horizontal, 18)
-                }
-                .frame(height: 34)
-            }
-
+        ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.secondary)
-
-                TextField(placeholder, text: $query)
-                    .font(Theme.rounded(.footnote))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .submitLabel(.search)
-                    .onSubmit { history.add(query) }
-
-                if !query.isEmpty {
-                    Button {
-                        query = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("清空搜索")
+                ForEach(history.items, id: \.self) { term in
+                    chip(term)
                 }
-
-                Button(action: exitSearch) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .bold))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("退出搜索")
             }
-            .padding(.horizontal, 14)
-            .frame(height: 44)
-            .background(.regularMaterial, in: Capsule())
-            .overlay {
-                Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
-            }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, Theme.screenPadding)
         }
-        .padding(.bottom, 8)
+        .frame(height: Theme.controlSize)
     }
 
     private func chip(_ term: String) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             Button {
                 query = term
-                history.add(term)
             } label: {
                 Text(term)
-                    .font(Theme.rounded(.caption))
+                    .font(Theme.rounded(.footnote))
                     .lineLimit(1)
-                    .padding(.leading, 10)
-                    .padding(.vertical, 6)
+                    .padding(.leading, 16)
+                    .padding(.trailing, 8)
+                    .frame(height: Theme.controlSize)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -108,20 +61,90 @@ struct SearchFieldBar: View {
                 history.remove(term)
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .frame(width: 22, height: 22)
-                    .contentShape(Circle())
+                    .font(.system(size: 11, weight: .bold))
+                    .frame(width: 30, height: Theme.controlSize)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("删除历史 \(term)")
-            .padding(.trailing, 4)
+            .padding(.trailing, 8)
         }
         .glassEffect(.regular, in: .capsule)
     }
+}
 
-    private func exitSearch() {
-        history.add(query)
-        query = ""
+struct LiquidSearchBar: View {
+
+    @Binding var text: String
+    let placeholder: String
+    var history: SearchHistory?
+    let onExit: () -> Void
+
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if let history {
+                SearchHistoryRow(history: history, query: $text)
+            }
+
+            HStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.secondary)
+
+                    TextField(placeholder, text: $text)
+                        .font(Theme.rounded(.footnote))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.search)
+                        .focused($focused)
+                        .onSubmit { history?.add(text) }
+
+                    if !text.isEmpty {
+                        Button {
+                            text = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("清空搜索")
+                    }
+                }
+                .padding(.horizontal, 16)
+                .frame(height: Theme.controlSize)
+                .background(.regularMaterial, in: Capsule())
+                .overlay {
+                    Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
+                }
+
+                Button {
+                    exit()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: Theme.controlSize, height: Theme.controlSize)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .accessibilityLabel("退出搜索")
+            }
+            .padding(.horizontal, Theme.screenPadding)
+        }
+        .padding(.bottom, 8)
+        .task {
+            try? await Task.sleep(for: .milliseconds(120))
+            focused = true
+        }
+    }
+
+    private func exit() {
+        focused = false
+        history?.add(text)
+        text = ""
         onExit()
     }
 }

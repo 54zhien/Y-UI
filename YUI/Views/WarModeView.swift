@@ -7,7 +7,6 @@ struct WarModeView: View {
     @State private var query = ""
     @State private var isSearching = false
     @State private var history = SearchHistory()
-    @Namespace private var searchNamespace
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -30,22 +29,38 @@ struct WarModeView: View {
                             .padding(.top, 24)
                     }
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 10)
+                .padding(.horizontal, Theme.screenPadding)
+                .padding(.top, 12)
                 .padding(.bottom, 48)
             }
             .scrollIndicators(.hidden)
+            .blur(radius: isSearching ? 16 : 0)
+            .animation(.snappy(duration: 0.26), value: isSearching)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            header
+        .safeAreaInset(edge: .top, spacing: 0) { header }
+        .overlay(alignment: .top) {
+            EdgeFade(edge: .top)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if isSearching {
-                SearchFieldBar(query: $query, placeholder: "搜索战争模式项目", history: history) {
-                    withAnimation(.snappy) { isSearching = false }
-                }
-                .matchedGeometryEffect(id: "warSearch", in: searchNamespace)
+                LiquidSearchBar(
+                    text: $query,
+                    placeholder: "搜索战争模式项目",
+                    history: history,
+                    onExit: {
+                        withAnimation(.snappy) {
+                            isSearching = false
+                            query = ""
+                        }
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if !isSearching {
+                EdgeFade(edge: .bottom)
             }
         }
     }
@@ -65,20 +80,18 @@ struct WarModeView: View {
                     glassCircle(symbol: "magnifyingglass", label: "搜索项目") {
                         withAnimation(.snappy) { isSearching = true }
                     }
-                    .matchedGeometryEffect(id: "warSearch", in: searchNamespace)
                 }
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, Theme.screenPadding)
         .padding(.vertical, 6)
-        .background(.clear)
     }
 
     private func glassCircle(symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
-                .frame(width: 40, height: 40)
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: Theme.controlSize, height: Theme.controlSize)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -134,8 +147,7 @@ struct WarModeView: View {
                 ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
                     row(item)
                     if index < group.items.count - 1 {
-                        Divider()
-                            .padding(.leading, 52)
+                        Divider().padding(.leading, 52)
                     }
                 }
             }

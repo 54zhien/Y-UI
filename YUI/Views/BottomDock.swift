@@ -6,73 +6,74 @@ struct BottomDock: View {
     var containerSize: CGSize
     var safeArea: EdgeInsets
     var warNamespace: Namespace.ID
-    var searchNamespace: Namespace.ID
     var searchHistory: SearchHistory
     var onOpenWarMode: () -> Void = {}
     var onOpenSettings: () -> Void = {}
     @State private var didLongPress = false
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private let controlSpacing: CGFloat = 8
+    private let spacing: CGFloat = 10
 
-    private var glassHeight: CGFloat {
-        usesAccessibilityText ? 50 : 44
+    private var sideInset: CGFloat {
+        let corner = Theme.screenCornerRadius(for: containerSize)
+        let alignment = corner - Theme.controlSize / 2
+        return max(10, min(alignment, 30))
     }
 
-    private var isNarrow: Bool {
-        containerSize.width < 380
-    }
-
-    private var usesAccessibilityText: Bool {
-        dynamicTypeSize >= .accessibility1
-    }
-
-    private var showsCapsuleTitle: Bool {
-        !isNarrow && !usesAccessibilityText
+    private var bottomInset: CGFloat {
+        safeArea.bottom > 0 ? max(8, min(sideInset, 28)) : 16
     }
 
     private var capsuleWidth: CGFloat {
-        if usesAccessibilityText { return 150 }
-        return isNarrow ? 112 : 132
+        let available = containerSize.width - sideInset * 2 - Theme.controlSize * 2 - spacing * 2
+        return min(max(available * 0.42, 104), 168)
     }
 
     var body: some View {
-        let corner = Theme.screenCornerRadius(for: containerSize)
-
-        let alignmentInset = corner - glassHeight / 2
-        let sideInset = max(8, min(alignmentInset, 30))
-        let bottomInset = safeArea.bottom > 0 ? max(6, min(alignmentInset, 30)) : 14
-
-        HStack(spacing: 0) {
-            circleButton(symbol: "gearshape", label: "设置", offsetX: gearOffset) {
-                onOpenSettings()
-            }
-            .matchedTransitionSource(id: WarRoute.settingsSourceID, in: searchNamespace)
-
-            Spacer(minLength: controlSpacing)
-
-            warModeCapsule(width: capsuleWidth)
-                .matchedTransitionSource(id: WarRoute.warSourceID, in: warNamespace)
-                .offset(x: gearOffset)
-
-            Spacer(minLength: controlSpacing)
+        ZStack(alignment: .bottom) {
+            dockRow
+                .offset(x: model.isSearchingHome ? -(containerSize.width + Theme.controlSize * 2) : 0)
+                .allowsHitTesting(!model.isSearchingHome)
+                .accessibilityHidden(model.isSearchingHome)
+                .animation(.snappy(duration: 0.34), value: model.isSearchingHome)
 
             if model.isSearchingHome {
-                SearchFieldBar(query: $model.homeQuery, placeholder: "搜索面板", history: searchHistory) {
-                    withAnimation(.snappy) {
-                        model.homeQuery = ""
-                        model.isSearchingHome = false
+                LiquidSearchBar(
+                    text: $model.homeQuery,
+                    placeholder: "搜索面板",
+                    history: searchHistory,
+                    onExit: {
+                        withAnimation(.snappy(duration: 0.34)) {
+                            model.homeQuery = ""
+                            model.isSearchingHome = false
+                        }
                     }
+                )
+                .transition(.opacity)
+                .padding(.bottom, bottomInset)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var dockRow: some View {
+        HStack(spacing: 0) {
+            circle(symbol: "gearshape", label: "设置") {
+                onOpenSettings()
+            }
+            .matchedTransitionSource(id: WarRoute.settingsSourceID, in: warNamespace)
+
+            Spacer(minLength: spacing)
+
+            warCapsule
+
+            Spacer(minLength: spacing)
+
+            circle(symbol: "magnifyingglass", label: "搜索") {
+                withAnimation(.snappy(duration: 0.34)) {
+                    model.homeQuery = ""
+                    model.isSearchingHome = true
                 }
-                .matchedGeometryEffect(id: "homeSearch", in: searchNamespace)
-            } else {
-                circleButton(symbol: "magnifyingglass", label: "搜索") {
-                    withAnimation(.snappy) {
-                        model.homeQuery = ""
-                        model.isSearchingHome = true
-                    }
-                }
-                .matchedGeometryEffect(id: "homeSearch", in: searchNamespace)
             }
         }
         .padding(.horizontal, sideInset)
@@ -80,31 +81,19 @@ struct BottomDock: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var gearOffset: CGFloat {
-        model.isSearchingHome ? -containerSize.width * 0.62 : 0
-    }
-
-    private func circleButton(
-        symbol: String,
-        label: String,
-        offsetX: CGFloat = 0,
-        isSettingsSource: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func circle(symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 17, weight: .medium))
-                .frame(width: glassHeight, height: glassHeight)
+                .font(.system(size: 19, weight: .medium))
+                .frame(width: Theme.controlSize, height: Theme.controlSize)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .offset(x: offsetX)
         .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel(label)
-        .accessibilityHint("打开演示占位页面")
     }
 
-    private func warModeCapsule(width: CGFloat) -> some View {
+    private var warCapsule: some View {
         Button {
             if didLongPress {
                 didLongPress = false
@@ -116,29 +105,25 @@ struct BottomDock: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: model.warModeEnabled ? "shield.lefthalf.filled" : "shield")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 17, weight: .medium))
 
-                if showsCapsuleTitle {
-                    Text("战争模式")
-                        .font(Theme.rounded(.footnote, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
+                Text("战争模式")
+                    .font(Theme.rounded(.footnote, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 Text(model.warModeEnabled ? "开" : "关")
                     .font(Theme.rounded(.footnote, weight: .bold))
                     .foregroundStyle(model.warModeEnabled ? Color.green : Color.secondary)
-                    .lineLimit(1)
                     .contentTransition(.opacity)
             }
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity)
-            .frame(height: glassHeight)
+            .padding(.horizontal, 14)
+            .frame(width: capsuleWidth, height: Theme.controlSize)
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .frame(width: width, height: glassHeight)
-        .contentShape(.capsule)
         .glassEffect(warModeGlass, in: .capsule)
+        .matchedTransitionSource(id: WarRoute.warSourceID, in: warNamespace)
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.5).onEnded { _ in
                 didLongPress = true
@@ -146,16 +131,16 @@ struct BottomDock: View {
             }
         )
         .accessibilityLabel("战争模式")
+        .accessibilityValue(model.warModeEnabled ? "开" : "关")
+        .accessibilityHint("轻点切换状态，长按展开战争模式设置")
         .accessibilityAction(named: Text("展开战争模式设置")) {
             onOpenWarMode()
         }
-        .accessibilityValue(model.warModeEnabled ? "开" : "关")
-        .accessibilityHint("切换战争模式演示状态，仅模拟，不改变真实网络或特效")
     }
 
     private var warModeGlass: Glass {
         model.warModeEnabled
-            ? .regular.tint(Color.orange.opacity(0.32)).interactive()
+            ? .regular.tint(Color.orange.opacity(0.28)).interactive()
             : .regular.interactive()
     }
 }
