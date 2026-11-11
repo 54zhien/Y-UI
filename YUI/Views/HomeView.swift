@@ -6,6 +6,7 @@ struct HomeView: View {
     @State private var path: [WarRoute] = []
     @State private var searchHistory = SearchHistory()
     @State private var isCollapsed = false
+    @State private var collapseProgress: CGFloat = 0
     @State private var isKeyboardInput = false
     @State private var keyboardText = ""
     @Namespace private var warNamespace
@@ -38,11 +39,6 @@ struct HomeView: View {
                         .safeAreaBar(edge: .top, spacing: 0) {
                             topBar
                         }
-
-                    GradientMaskedBlur(edge: .bottom)
-                        .frame(height: Theme.dockControlSize + 44)
-                        .allowsHitTesting(false)
-                        .ignoresSafeArea(.container, edges: .bottom)
 
                     if !isKeyboardInput && !model.isSearchingHome {
                         BottomDock(
@@ -97,7 +93,12 @@ struct HomeView: View {
                 if !model.isEditing {
                     KeyboardPreviewCard()
                         .padding(.top, 6)
-                        .transition(.opacity)
+                        .scaleEffect(1 - collapseProgress * 0.78, anchor: .top)
+                        .offset(y: -collapseProgress * KeyboardPreviewCard.preferredHeight * 0.65)
+                        .opacity(Double(1 - collapseProgress))
+                        .frame(height: KeyboardPreviewCard.preferredHeight * (1 - collapseProgress))
+                        .clipped()
+                        .allowsHitTesting(collapseProgress < 0.05)
                 }
 
                 Text("你的设置")
@@ -130,19 +131,13 @@ struct HomeView: View {
     }
 
     private var topBar: some View {
+        ZStack {
         HStack(alignment: .center, spacing: 12) {
             if model.isEditing {
                 exitEditButton
-            } else if isCollapsed {
+            } else if collapseProgress > 0.6 {
                 keyboardCircle
                     .matchedGeometryEffect(id: "keyboardInput", in: topLeftNamespace)
-            } else {
-                Text("PureGlass")
-                    .font(.system(size: titleSize, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(minHeight: Theme.controlSize, alignment: .leading)
-                    .accessibilityAddTraits(.isHeader)
             }
 
             Spacer(minLength: 8)
@@ -152,6 +147,16 @@ struct HomeView: View {
                     .allowsHitTesting(path.isEmpty)
                     .accessibilityHidden(!path.isEmpty)
             }
+        }
+        if !model.isEditing {
+            Text("PureGlass")
+                .font(.system(size: titleSize - collapseProgress * 18, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .offset(x: (1 - collapseProgress) * -80)
+                .allowsHitTesting(false)
+                .accessibilityAddTraits(.isHeader)
+        }
         }
         .padding(.horizontal, Theme.screenPadding)
         .padding(.vertical, 6)
@@ -201,6 +206,7 @@ struct HomeView: View {
     }
 
     private func updateCollapse(_ offset: CGFloat) {
+        collapseProgress = min(max(offset / collapseThreshold, 0), 1)
         if !isCollapsed && offset > collapseThreshold {
             if reduceMotion {
                 isCollapsed = true

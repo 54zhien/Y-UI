@@ -24,7 +24,7 @@ struct BottomDock: View {
     }
 
     private var bottomInset: CGFloat {
-        cornerCenterInset
+        8
     }
 
     private var capsuleWidth: CGFloat {
