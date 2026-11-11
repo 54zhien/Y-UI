@@ -41,13 +41,6 @@ struct HomeView: View {
                         }
 
                     if !isKeyboardInput && !model.isSearchingHome {
-                        GradientMaskedBlur(edge: .bottom, opaqueFraction: 0.45)
-                            .frame(height: 112)
-                            .frame(maxWidth: .infinity)
-                            .opacity(model.isEditing ? 0 : 1)
-                            .allowsHitTesting(false)
-                            .ignoresSafeArea(.container, edges: .bottom)
-
                         BottomDock(
                             model: model,
                             containerSize: proxy.size,
@@ -95,7 +88,7 @@ struct HomeView: View {
 
     private func scroll(screenSize: CGSize, topInset: CGFloat) -> some View {
         ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 44) {
+            VStack(alignment: .leading, spacing: 12) {
                 if !model.isEditing {
                     KeyboardPreviewCard(morphProgress: collapseProgress)
                         .padding(.top, 28)
@@ -109,7 +102,8 @@ struct HomeView: View {
                                 )
                         }
                         .opacity(Double(1 - max((collapseProgress - 0.88) / 0.12, 0)))
-                        .frame(height: (KeyboardPreviewCard.preferredHeight + 28) * (1 - collapseProgress), alignment: .top)
+                        .frame(height: KeyboardPreviewCard.preferredHeight + 28, alignment: .top)
+                        .padding(.bottom, 36)
                         .zIndex(1)
                         .allowsHitTesting(collapseProgress < 0.05)
                 }
