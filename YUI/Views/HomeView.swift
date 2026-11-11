@@ -33,8 +33,6 @@ struct HomeView: View {
 
                     scroll
 
-                    topBar
-
                     VStack(spacing: 0) {
                         Spacer(minLength: 0)
                         BottomDock(
@@ -51,6 +49,9 @@ struct HomeView: View {
                         .animation(.snappy(duration: 0.3), value: model.isEditing)
                     }
                     .ignoresSafeArea(.container, edges: .bottom)
+                }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    topBar
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     bottomInput
@@ -116,13 +117,16 @@ struct HomeView: View {
             .animation(.snappy, value: model.isEditing)
         }
         .scrollIndicators(.hidden)
+        .scrollEdgeEffectStyle(.soft, for: .top)
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
         .blur(radius: isObscured ? 18 : 0)
         .animation(.snappy(duration: 0.26), value: isObscured)
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
             max(geometry.contentOffset.y + geometry.contentInsets.top, 0)
         } action: { _, offset in
-            let raw = min(max(offset / 96, 0), 1)
-            let target = reduceMotion ? (raw > 0.5 ? CGFloat(1) : 0) : raw
+            let raw = min(max(offset / 110, 0), 1)
+            let eased = raw * raw * (3 - 2 * raw)
+            let target = reduceMotion ? (eased > 0.5 ? CGFloat(1) : 0) : eased
             if abs(target - progress) > 0.01 {
                 if reduceMotion {
                     progress = target
@@ -163,10 +167,8 @@ struct HomeView: View {
                 topLeftControl
                 Spacer(minLength: 8)
                 manageButton
-                    .opacity(Double(1 - progress))
-                    .blur(radius: progress * 6)
-                    .allowsHitTesting(path.isEmpty && progress < 0.5 && !model.isEditing)
-                    .accessibilityHidden(!path.isEmpty || progress >= 0.5 || model.isEditing)
+                    .allowsHitTesting(path.isEmpty)
+                    .accessibilityHidden(!path.isEmpty)
             }
             .padding(.horizontal, Theme.screenPadding)
             .padding(.top, 6)

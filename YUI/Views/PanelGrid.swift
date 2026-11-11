@@ -1,12 +1,27 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct PanelGrid: View {
 
     let model: HomeModel
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var dragging: PanelItem?
+    @State private var phase: DragPhase = .idle
+    @State private var draggedID: String?
+    @State private var draggedItem: PanelItem?
+    @State private var startFrame: CGRect = .zero
+    @State private var currentPoint: CGPoint = .zero
+    @State private var frames: [String: CGRect] = [:]
+    @State private var settleTask: Task<Void, Never>?
+
+    enum DragPhase: Equatable {
+        case idle
+        case pressing
+        case lifted
+        case dragging
+        case settling
+    }
+
+    private let space = "panelGrid"
 
     private var columns: [GridItem] {
         if dynamicTypeSize >= .accessibility1 {
@@ -18,81 +33,173 @@ struct PanelGrid: View {
         ]
     }
 
+    private var isDraggingActive: Bool {
+        phase == .dragging || phase == .lifted || phase == .settling
+    }
+
     var body: some View {
+        grid
+            .coordinateSpace(name: space)
+            .overlay(alignment: .topLeading) {
+                if let item = draggedItem, isDraggingActive {
+                    mirror(item)
+                        .allowsHitTesting(false)
+                }
+            }
+            .onPreferenceChange(PanelFrameKey.self) { value in
+                frames = value
+            }
+            .onChange(of: model.isEditing) { _, editing in
+                if !editing { cancelDrag() }
+            }
+            .onChange(of: model.hiddenPanels) { _, _ in
+                cancelDrag()
+            }
+            .onDisappear { cancelDrag() }
+            .animation(.snappy, value: model.panels)
+    }
+
+    private var grid: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(model.filteredPanels) { item in
                 PanelTile(item: item, model: model, isEditing: model.isEditing)
-                    .modifier(EditOnlyDrag(item: item, enabled: model.isEditing, dragging: $dragging))
-                    .onDrop(
-                        of: [UTType.text],
-                        delegate: PanelDropDelegate(model: model, item: item, dragging: $dragging)
-                    )
+                    .opacity(draggedID == item.id ? 0 : 1)
+                    .background {
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: PanelFrameKey.self,
+                                value: [item.id: proxy.frame(in: .named(space))]
+                            )
+                        }
+                    }
+                    .gesture(model.isEditing ? dragGesture(item) : nil)
             }
         }
-        .animation(.snappy, value: model.panels)
-    }
-}
-
-struct EditOnlyDrag: ViewModifier {
-
-    let item: PanelItem
-    let enabled: Bool
-    @Binding var dragging: PanelItem?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if enabled {
-            draggable(content)
-        } else {
-            content
-        }
     }
 
-    private func draggable(_ content: Content) -> some View {
-        content
-            .opacity(dragging?.id == item.id ? 0 : 1)
-            .onDrag {
-                dragging = item
-                return NSItemProvider(object: item.id as NSString)
-            } preview: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label(item.title, systemImage: item.symbol)
-                        .font(Theme.rounded(.caption, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    Text(item.value)
-                        .font(Theme.rounded(.headline, weight: .semibold))
+    private func dragGesture(_ item: PanelItem) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.3)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(space)))
+            .onChanged { value in
+                switch value {
+                case .first(true):
+                    if phase == .idle {
+                        phase = .pressing
+                        beginLift(item)
+                    }
+                case .second(true, let drag):
+                    guard let drag else { return }
+                    if phase == .lifted {
+                        phase = .dragging
+                    }
+                    currentPoint = drag.location
+                    updateTarget(for: drag.location)
+                default:
+                    break
                 }
-                .padding(14)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
+            .onEnded { _ in
+                endDrag()
             }
     }
-}
 
-struct PanelDropDelegate: DropDelegate {
+    private func beginLift(_ item: PanelItem) {
+        settleTask?.cancel()
+        draggedItem = item
+        draggedID = item.id
+        startFrame = frames[item.id] ?? .zero
+        currentPoint = CGPoint(x: startFrame.midX, y: startFrame.midY)
+        withAnimation(.snappy(duration: 0.16)) {
+            phase = .lifted
+        }
+        settleTask = Task {
+            try? await Task.sleep(for: .milliseconds(120))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                if phase == .lifted {
+                    withAnimation(.snappy(duration: 0.12)) {
+                        phase = .dragging
+                    }
+                }
+            }
+        }
+    }
 
-    let model: HomeModel
-    let item: PanelItem
-    @Binding var dragging: PanelItem?
+    private func updateTarget(for point: CGPoint) {
+        guard let itemID = draggedID,
+              let currentIndex = model.panels.firstIndex(where: { $0.id == itemID })
+        else { return }
 
-    func dropEntered(info: DropInfo) {
-        guard let dragging,
-              dragging.id != item.id,
-              let from = model.panels.firstIndex(where: { $0.id == dragging.id }),
-              let to = model.panels.firstIndex(where: { $0.id == item.id })
+        let hit = frames.first { key, rect in
+            key != itemID && rect.contains(point)
+        }?.key
+
+        guard let hit,
+              let targetIndex = model.panels.firstIndex(where: { $0.id == hit }),
+              targetIndex != currentIndex
         else { return }
 
         withAnimation(.snappy) {
-            model.move(from: from, to: to)
+            model.move(from: currentIndex, to: targetIndex)
         }
     }
 
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+    private func endDrag() {
+        guard let itemID = draggedID else { return }
+        let slot = frames[itemID] ?? startFrame
+
+        if phase == .pressing || phase == .lifted {
+            phase = .settling
+            withAnimation(.snappy(duration: 0.2)) {
+                draggedItem = nil
+                draggedID = nil
+                phase = .idle
+            }
+            return
+        }
+
+        phase = .settling
+        withAnimation(.snappy(duration: 0.22)) {
+            currentPoint = CGPoint(x: slot.midX, y: slot.midY)
+        }
+
+        settleTask?.cancel()
+        settleTask = Task {
+            try? await Task.sleep(for: .milliseconds(230))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.easeOut(duration: 0.14)) {
+                    draggedItem = nil
+                }
+                phase = .idle
+                draggedID = nil
+            }
+        }
     }
 
-    func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
-        return true
+    private func cancelDrag() {
+        settleTask?.cancel()
+        draggedItem = nil
+        draggedID = nil
+        phase = .idle
+    }
+
+    private func mirror(_ item: PanelItem) -> some View {
+        PanelTile(item: item, model: model, isEditing: false)
+            .frame(width: max(startFrame.width, 80), height: max(startFrame.height, 60))
+            .scaleEffect(phase == .lifted ? 1.04 : 1)
+            .shadow(color: .black.opacity(phase == .lifted ? 0.18 : 0.1), radius: phase == .lifted ? 12 : 6, y: 4)
+            .offset(
+                x: currentPoint.x - startFrame.width / 2,
+                y: currentPoint.y - startFrame.height / 2
+            )
+    }
+}
+
+struct PanelFrameKey: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
 
@@ -132,6 +239,7 @@ struct PanelTile: View {
             cardContent(showsEditRow: true)
             hideButton
                 .padding(6)
+                .highPriorityGesture(TapGesture())
         }
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: Text("上移")) {
@@ -173,8 +281,8 @@ struct PanelTile: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     Image(systemName: item.symbol)
-                        .font(.system(size: 17, weight: .medium))
-                        .frame(width: 22, height: 22)
+                        .font(.system(size: Theme.controlIconSize, weight: .medium))
+                        .frame(width: 24, height: 24)
                     Text(item.title)
                         .font(Theme.rounded(.caption, weight: .semibold))
                         .foregroundStyle(.secondary)
@@ -188,12 +296,6 @@ struct PanelTile: View {
                     .lineLimit(wrapsText ? 3 : 1)
                     .minimumScaleFactor(0.85)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text(item.detail)
-                    .font(Theme.rounded(.caption2))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(wrapsText ? 3 : 1)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(16)
@@ -219,8 +321,8 @@ struct HiddenPanelsBar: View {
                 ForEach(Array(model.hiddenPanels.enumerated()), id: \.element.id) { index, item in
                     HStack(spacing: 10) {
                         Image(systemName: item.symbol)
-                            .font(.system(size: 15, weight: .medium))
-                            .frame(width: 22)
+                            .font(.system(size: Theme.controlIconSize, weight: .medium))
+                            .frame(width: 24)
                         Text(item.title)
                             .font(Theme.rounded(.subheadline))
                         Spacer(minLength: 8)
@@ -251,13 +353,12 @@ struct HiddenPanelsBar: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(colorScheme == .dark ? 0.04 : 0.24))
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.04 : 0.3))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
             }
-            .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
         }
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsDemoView: View {
 
     @State private var history = SearchHistory(seed: ["外观", "输入", "词库"])
+    @Environment(\.colorScheme) private var colorScheme
     @State private var query = ""
     @State private var isSearching = false
     @Environment(\.dismiss) private var dismiss
@@ -51,6 +52,8 @@ struct SettingsDemoView: View {
                 .padding(.bottom, 48)
             }
             .scrollIndicators(.hidden)
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
             .blur(radius: isSearching ? 16 : 0)
             .animation(.snappy(duration: 0.26), value: isSearching)
         }
@@ -114,6 +117,10 @@ struct SettingsDemoView: View {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.03 : 0.26))
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
