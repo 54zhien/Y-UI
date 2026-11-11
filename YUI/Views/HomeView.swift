@@ -7,6 +7,7 @@ struct HomeView: View {
     @State private var searchHistory = SearchHistory()
     @State private var isCollapsed = false
     @State private var collapseProgress: CGFloat = 0
+    @State private var isUserDragging = false
     @State private var isKeyboardInput = false
     @State private var keyboardText = ""
     @Namespace private var warNamespace
@@ -26,7 +27,7 @@ struct HomeView: View {
         88
     }
 
-    private var expandThreshold: CGFloat { 18 }
+    private var expandThreshold: CGFloat { -72 }
 
     var body: some View {
         @Bindable var model = model
@@ -103,8 +104,8 @@ struct HomeView: View {
                                 )
                         }
                         .opacity(Double(1 - max((collapseProgress - 0.88) / 0.12, 0)))
-                        .frame(height: KeyboardPreviewCard.preferredHeight + 28, alignment: .top)
-                        .padding(.bottom, 36)
+                        .frame(height: (KeyboardPreviewCard.preferredHeight + 28) * (1 - collapseProgress), alignment: .top)
+                        .padding(.bottom, 36 * (1 - collapseProgress))
                         .zIndex(1)
                         .allowsHitTesting(collapseProgress < 0.05)
                 }
@@ -131,10 +132,13 @@ struct HomeView: View {
         .blur(radius: isObscured ? 18 : 0)
         .animation(.easeInOut(duration: 0.42), value: isObscured)
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
-            max(geometry.contentOffset.y + geometry.contentInsets.top, 0)
+            geometry.contentOffset.y + geometry.contentInsets.top
         } action: { _, offset in
             guard !model.isEditing else { return }
             updateCollapse(offset)
+        }
+        .onScrollPhaseChange { _, phase in
+            isUserDragging = phase == .interacting
         }
     }
 
@@ -237,7 +241,7 @@ struct HomeView: View {
             return
         }
 
-        if isCollapsed && offset < expandThreshold {
+        if isCollapsed && isUserDragging && offset <= expandThreshold {
             if reduceMotion {
                 isCollapsed = false
                 collapseProgress = 0
