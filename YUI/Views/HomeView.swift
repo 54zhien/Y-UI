@@ -12,6 +12,7 @@ struct HomeView: View {
     @Namespace private var warNamespace
     @Namespace private var topLeftNamespace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 38
 
     private let dockReserve: CGFloat = 128
@@ -22,10 +23,10 @@ struct HomeView: View {
     }
 
     private var collapseThreshold: CGFloat {
-        KeyboardPreviewCard.preferredHeight * 0.52
+        88
     }
 
-    private var expandThreshold: CGFloat { 26 }
+    private var expandThreshold: CGFloat { 18 }
 
     var body: some View {
         @Bindable var model = model
@@ -142,10 +143,10 @@ struct HomeView: View {
         HStack(alignment: .center, spacing: 12) {
             if model.isEditing {
                 exitEditButton
-            } else if collapseProgress > 0 {
+            } else if isCollapsed {
                 keyboardCircle
                     .matchedGeometryEffect(id: "keyboardInput", in: topLeftNamespace)
-                    .opacity(Double(collapseProgress))
+                    .transition(.opacity)
             }
 
             Spacer(minLength: 8)
@@ -165,6 +166,7 @@ struct HomeView: View {
                 .padding(.vertical, 6)
                 .background {
                     Capsule()
+                        .fill(colorScheme == .dark ? Color(hex: 0x47394B).opacity(0.88) : Color.white.opacity(0.82))
                         .glassEffect(.regular, in: .capsule)
                         .opacity(Double(max((collapseProgress - 0.82) / 0.18, 0)))
                 }
@@ -175,6 +177,7 @@ struct HomeView: View {
         }
         .padding(.horizontal, Theme.screenPadding)
         .padding(.vertical, 6)
+        .frame(height: 64)
         .frame(maxWidth: .infinity)
         .opacity(path.isEmpty && !model.isSearchingHome ? 1 : 0)
         .allowsHitTesting(path.isEmpty && !model.isSearchingHome)
@@ -221,15 +224,14 @@ struct HomeView: View {
     }
 
     private func updateCollapse(_ offset: CGFloat) {
-        let threshold = collapseThreshold
-        let fraction = min(max(offset / threshold, 0), 1)
-        collapseProgress = reduceMotion ? (offset >= threshold ? 1 : 0) : fraction * fraction * (3 - 2 * fraction)
-        if !isCollapsed && offset > collapseThreshold {
+        if !isCollapsed && offset >= collapseThreshold {
             if reduceMotion {
                 isCollapsed = true
+                collapseProgress = 1
             } else {
-                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                withAnimation(.smooth(duration: 0.46)) {
                     isCollapsed = true
+                    collapseProgress = 1
                 }
             }
             return
@@ -238,9 +240,11 @@ struct HomeView: View {
         if isCollapsed && offset < expandThreshold {
             if reduceMotion {
                 isCollapsed = false
+                collapseProgress = 0
             } else {
-                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                withAnimation(.spring(duration: 0.58, bounce: 0.16)) {
                     isCollapsed = false
+                    collapseProgress = 0
                 }
             }
         }
