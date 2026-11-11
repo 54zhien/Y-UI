@@ -182,9 +182,9 @@ struct HomeView: View {
         .padding(.horizontal, Theme.screenPadding)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
-        .opacity(path.isEmpty ? 1 : 0)
-        .allowsHitTesting(path.isEmpty)
-        .accessibilityHidden(!path.isEmpty)
+        .opacity(path.isEmpty && !model.isSearchingHome ? 1 : 0)
+        .allowsHitTesting(path.isEmpty && !model.isSearchingHome)
+        .accessibilityHidden(!path.isEmpty || model.isSearchingHome)
     }
 
     private var keyboardCircle: some View {
