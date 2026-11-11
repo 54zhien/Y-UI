@@ -41,6 +41,13 @@ struct HomeView: View {
                         }
 
                     if !isKeyboardInput && !model.isSearchingHome {
+                        GradientMaskedBlur(edge: .bottom, opaqueFraction: 0.45)
+                            .frame(height: 112)
+                            .frame(maxWidth: .infinity)
+                            .opacity(model.isEditing ? 0 : 1)
+                            .allowsHitTesting(false)
+                            .ignoresSafeArea(.container, edges: .bottom)
+
                         BottomDock(
                             model: model,
                             containerSize: proxy.size,
