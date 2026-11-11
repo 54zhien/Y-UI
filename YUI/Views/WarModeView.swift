@@ -35,14 +35,13 @@ struct WarModeView: View {
                 .padding(.bottom, 48)
             }
             .scrollIndicators(.hidden)
-            .scrollEdgeEffectStyle(.soft, for: .top)
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
             .blur(radius: isSearching ? 16 : 0)
             .animation(.snappy(duration: 0.26), value: isSearching)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .safeAreaInset(edge: .top, spacing: 0) { header }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .safeAreaBar(edge: .top, spacing: 0) { header }
+        .safeAreaBar(edge: .bottom, spacing: 0) {
             if isSearching {
                 LiquidSearchBar(
                     text: $query,
@@ -181,13 +180,18 @@ struct WarModeView: View {
         VStack(spacing: 0) {
             content()
         }
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white.opacity(colorScheme == .dark ? 0.03 : 0.26))
+        .background {
+            if colorScheme == .dark {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(Color.white.opacity(0.03))
+                    }
+            } else {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.white.opacity(0.34))
+            }
         }
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)

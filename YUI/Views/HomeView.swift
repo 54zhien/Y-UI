@@ -6,6 +6,7 @@ struct HomeView: View {
     @State private var path: [WarRoute] = []
     @State private var searchHistory = SearchHistory()
     @State private var progress: CGFloat = 0
+    @State private var isCollapsed = false
     @State private var isKeyboardInput = false
     @State private var keyboardText = ""
     @Namespace private var warNamespace
@@ -14,34 +15,33 @@ struct HomeView: View {
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 38
 
     private let dockReserve: CGFloat = 112
-    private let topBarHeight: CGFloat = 60
+    private let keyboardGap: CGFloat = 14
 
     private var isObscured: Bool {
         !path.isEmpty || model.isSearchingHome || isKeyboardInput
     }
 
-    private var isCollapsed: Bool {
-        progress >= 0.9
+    private var collapseThreshold: CGFloat {
+        min(max(KeyboardPreviewCard.preferredHeight * 0.78, 120), 260)
     }
+
+    private var expandThreshold: CGFloat { 26 }
 
     var body: some View {
         @Bindable var model = model
 
         NavigationStack(path: $path) {
             GeometryReader { proxy in
-                ZStack(alignment: .top) {
+                ZStack {
                     DiffuseBackground()
 
                     scroll
-
-                    dockLayer(proxy)
-
-                    topBar
-
-
-                }
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    bottomInput
+                        .safeAreaBar(edge: .top, spacing: 0) {
+                            topBar
+                        }
+                        .safeAreaBar(edge: .bottom, spacing: 0) {
+                            bottomBar(proxy)
+                        }
                 }
                 .navigationDestination(for: WarRoute.self) { route in
                     destination(for: route)
@@ -55,37 +55,34 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private var bottomInput: some View {
+    private func bottomBar(_ proxy: GeometryProxy) -> some View {
         if model.isSearchingHome {
             LiquidSearchBar(
                 text: $model.homeQuery,
                 placeholder: "搜索面板",
                 history: searchHistory,
                 onExit: {
-                    withAnimation(.snappy(duration: 0.3)) {
+                    withAnimation(.easeInOut(duration: 0.42)) {
                         model.homeQuery = ""
                         model.isSearchingHome = false
                     }
                 }
             )
+            .padding(.bottom, keyboardGap)
         } else if isKeyboardInput {
             LiquidSearchBar(
                 text: $keyboardText,
                 placeholder: "打几个字试试",
                 history: nil,
                 onExit: {
-                    withAnimation(.snappy) {
+                    withAnimation(.easeInOut(duration: 0.42)) {
                         isKeyboardInput = false
                     }
                 }
             )
+            .padding(.bottom, keyboardGap)
             .matchedGeometryEffect(id: "keyboardInput", in: topLeftNamespace)
-        }
-    }
-
-    private func dockLayer(_ proxy: GeometryProxy) -> some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
+        } else {
             BottomDock(
                 model: model,
                 containerSize: proxy.size,
@@ -94,22 +91,17 @@ struct HomeView: View {
                 onOpenWarMode: { path.append(.war) },
                 onOpenSettings: { path.append(.settings) }
             )
-            .offset(y: model.isEditing || isKeyboardInput ? 150 : 0)
-            .opacity(model.isEditing || isKeyboardInput ? 0 : 1)
-            .allowsHitTesting(!model.isEditing && !isKeyboardInput)
-            .animation(.snappy(duration: 0.3), value: model.isEditing)
-            .animation(.snappy(duration: 0.3), value: isKeyboardInput)
+            .offset(y: model.isEditing ? 150 : 0)
+            .opacity(model.isEditing ? 0 : 1)
+            .allowsHitTesting(!model.isEditing)
+            .animation(.easeInOut(duration: 0.5), value: model.isEditing)
         }
-        .frame(maxHeight: .infinity, alignment: .bottom)
-        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     private var scroll: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 18) {
-                if !model.isEditing {
-                    titleBlock
-                }
+                titleBlock
 
                 PanelGrid(model: model)
 
@@ -120,53 +112,36 @@ struct HomeView: View {
             .padding(.horizontal, Theme.screenPadding)
             .padding(.top, 8)
             .padding(.bottom, dockReserve)
-            .animation(.snappy(duration: 0.24), value: isCollapsed)
-            .animation(.snappy(duration: 0.24), value: model.isEditing)
+            .animation(.easeInOut(duration: 0.5), value: model.isEditing)
         }
         .scrollIndicators(.hidden)
-        .scrollEdgeEffectStyle(.soft, for: .top)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .contentMargins(.top, topBarHeight, for: .scrollContent)
+        .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
         .blur(radius: isObscured ? 18 : 0)
-        .animation(.snappy(duration: 0.26), value: isObscured)
+        .animation(.easeInOut(duration: 0.42), value: isObscured)
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
             max(geometry.contentOffset.y + geometry.contentInsets.top, 0)
         } action: { _, offset in
-            let raw = min(max(offset / 110, 0), 1)
-            let eased = raw * raw * (3 - 2 * raw)
-            let target = reduceMotion ? (eased > 0.5 ? CGFloat(1) : 0) : eased
-            if abs(target - progress) > 0.01 {
-                if reduceMotion {
-                    progress = target
-                } else {
-                    withAnimation(.easeInOut(duration: 0.22)) {
-                        progress = target
-                    }
-                }
-            }
+            updateCollapse(offset)
         }
     }
 
-    @ViewBuilder
     private var titleBlock: some View {
-        if !isCollapsed {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("PureGlass")
-                    .font(.system(size: titleSize, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .opacity(Double(1 - progress))
-                    .blur(radius: progress * 6)
-                    .frame(minHeight: Theme.controlSize, alignment: .leading)
-                    .accessibilityAddTraits(.isHeader)
+        VStack(alignment: .leading, spacing: 18) {
+            Text("PureGlass")
+                .font(.system(size: titleSize, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(minHeight: Theme.controlSize, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
 
-                KeyboardPreviewCard()
-                    .opacity(Double(1 - progress))
-                    .scaleEffect(1 - progress * 0.05, anchor: .topLeading)
-                    .accessibilityHidden(progress > 0.5)
-            }
-            .transition(.opacity.combined(with: .move(edge: .top)))
+            KeyboardPreviewCard()
         }
+        .opacity(isCollapsed ? 0 : Double(1 - progress))
+        .scaleEffect(isCollapsed ? 0.96 : 1 - min(progress, 1) * 0.05, anchor: .topLeading)
+        .frame(height: isCollapsed ? 0 : nil, alignment: .top)
+        .clipped()
+        .allowsHitTesting(!isCollapsed)
+        .accessibilityHidden(isCollapsed)
     }
 
     private var topBar: some View {
@@ -181,7 +156,6 @@ struct HomeView: View {
         }
         .padding(.horizontal, Theme.screenPadding)
         .padding(.vertical, 6)
-        .frame(height: topBarHeight)
         .frame(maxWidth: .infinity)
         .opacity(path.isEmpty ? 1 : 0)
         .allowsHitTesting(path.isEmpty)
@@ -201,7 +175,7 @@ struct HomeView: View {
 
     private var keyboardCircle: some View {
         circleButton(symbol: "keyboard", label: "打开键盘输入") {
-            withAnimation(.snappy) {
+            withAnimation(.easeInOut(duration: 0.42)) {
                 isKeyboardInput = true
             }
         }
@@ -209,7 +183,7 @@ struct HomeView: View {
 
     private var exitEditButton: some View {
         circleButton(symbol: "xmark", label: "退出管理模式") {
-            withAnimation(.snappy) {
+            withAnimation(.easeInOut(duration: 0.5)) {
                 model.toggleEditing()
             }
         }
@@ -220,7 +194,7 @@ struct HomeView: View {
             symbol: model.isEditing ? "checkmark" : "slider.horizontal.3",
             label: model.isEditing ? "完成编辑" : "管理面板"
         ) {
-            withAnimation(.snappy) {
+            withAnimation(.easeInOut(duration: 0.5)) {
                 model.toggleEditing()
             }
         }
@@ -236,6 +210,44 @@ struct HomeView: View {
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel(label)
+    }
+
+    private func updateCollapse(_ offset: CGFloat) {
+        let raw = min(max(offset / collapseThreshold, 0), 1)
+        let eased = raw * raw * (3 - 2 * raw)
+
+        if !isCollapsed && offset > collapseThreshold {
+            if reduceMotion {
+                isCollapsed = true
+                progress = 1
+            } else {
+                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                    isCollapsed = true
+                    progress = 1
+                }
+            }
+            return
+        }
+
+        if isCollapsed && offset < expandThreshold {
+            if reduceMotion {
+                isCollapsed = false
+                progress = 0
+            } else {
+                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                    isCollapsed = false
+                    progress = 0
+                }
+            }
+            return
+        }
+
+        guard !isCollapsed else { return }
+
+        let target = reduceMotion ? (eased > 0.5 ? CGFloat(1) : 0) : eased
+        if abs(target - progress) > 0.01 {
+            progress = target
+        }
     }
 
     @ViewBuilder

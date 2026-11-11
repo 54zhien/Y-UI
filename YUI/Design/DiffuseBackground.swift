@@ -59,7 +59,7 @@ struct DiffuseBackground: View {
 
                 RadialGradient(
                     colors: [
-                        Color.white.opacity(colorScheme == .dark ? 0.10 : 0.35),
+                        Color.white.opacity(colorScheme == .dark ? 0.10 : 0.22),
                         Color.white.opacity(0.0)
                     ],
                     center: .topTrailing,

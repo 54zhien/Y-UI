@@ -64,46 +64,33 @@ struct PanelGrid: View {
     private var grid: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(model.filteredPanels) { item in
-                PanelTile(item: item, model: model, isEditing: model.isEditing)
-                    .opacity(draggedID == item.id ? 0 : 1)
-                    .background {
-                        GeometryReader { proxy in
-                            Color.clear.preference(
-                                key: PanelFrameKey.self,
-                                value: [item.id: proxy.frame(in: .named(space))]
-                            )
-                        }
+                PanelTile(
+                    item: item,
+                    model: model,
+                    isEditing: model.isEditing,
+                    dragCallbacks: model.isEditing
+                        ? PanelTile.DragCallbacks(
+                            begin: { beginLift(item) },
+                            changed: { point in
+                                if phase == .lifted { phase = .dragging }
+                                currentPoint = point
+                                updateTarget(for: point)
+                            },
+                            ended: { endDrag() }
+                        )
+                        : nil
+                )
+                .opacity(draggedID == item.id ? 0 : 1)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: PanelFrameKey.self,
+                            value: [item.id: proxy.frame(in: .named(space))]
+                        )
                     }
-                    .contentShape(RoundedRectangle(cornerRadius: Theme.panelCornerRadius, style: .continuous))
-                    .gesture(model.isEditing ? dragGesture(item) : nil)
-            }
-        }
-    }
-
-    private func dragGesture(_ item: PanelItem) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.45)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(space)))
-            .onChanged { value in
-                switch value {
-                case .first(true):
-                    if phase == .idle {
-                        phase = .pressing
-                        beginLift(item)
-                    }
-                case .second(true, let drag):
-                    guard let drag else { return }
-                    if phase == .lifted {
-                        phase = .dragging
-                    }
-                    currentPoint = drag.location
-                    updateTarget(for: drag.location)
-                default:
-                    break
                 }
             }
-            .onEnded { _ in
-                endDrag()
-            }
+        }
     }
 
     private func beginLift(_ item: PanelItem) {
@@ -215,9 +202,16 @@ struct PanelFrameKey: PreferenceKey {
 
 struct PanelTile: View {
 
+    struct DragCallbacks {
+        let begin: () -> Void
+        let changed: (CGPoint) -> Void
+        let ended: () -> Void
+    }
+
     let item: PanelItem
     let model: HomeModel
     let isEditing: Bool
+    var dragCallbacks: DragCallbacks? = nil
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -245,12 +239,13 @@ struct PanelTile: View {
     }
 
     private var editableCard: some View {
-        ZStack(alignment: .topTrailing) {
-            cardContent(showsEditRow: true)
-            hideButton
-                .padding(6)
-                .highPriorityGesture(TapGesture())
-        }
+        cardContent(showsEditRow: true)
+            .contentShape(RoundedRectangle(cornerRadius: Theme.panelCornerRadius, style: .continuous))
+            .gesture(longPressDrag)
+            .overlay(alignment: .topTrailing) {
+                hideButton
+                    .padding(6)
+            }
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: Text("上移")) {
             if model.canMoveUp(item) {
@@ -265,6 +260,26 @@ struct PanelTile: View {
         .accessibilityAction(named: Text("隐藏面板")) {
             withAnimation(.snappy) { model.hide(item) }
         }
+    }
+
+    private var longPressDrag: some Gesture {
+        LongPressGesture(minimumDuration: 0.65, maximumDistance: 18)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("panelGrid")))
+            .onChanged { value in
+                switch value {
+                case .first(true):
+                    dragCallbacks?.begin()
+                case .second(true, let drag):
+                    if let drag {
+                        dragCallbacks?.changed(drag.location)
+                    }
+                default:
+                    break
+                }
+            }
+            .onEnded { _ in
+                dragCallbacks?.ended()
+            }
     }
 
     private var hideButton: some View {

@@ -2,6 +2,9 @@ import SwiftUI
 
 struct KeyboardPreviewCard: View {
 
+    static let preferredHeight: CGFloat = 214
+
+
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
