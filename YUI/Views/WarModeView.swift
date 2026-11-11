@@ -196,6 +196,7 @@ struct WarModeView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
+                .allowsHitTesting(false)
         }
     }
 }

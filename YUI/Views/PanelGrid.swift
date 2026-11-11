@@ -241,6 +241,9 @@ struct PanelTile: View {
     private var editableCard: some View {
         cardContent(showsEditRow: true)
             .contentShape(RoundedRectangle(cornerRadius: Theme.panelCornerRadius, style: .continuous))
+            .onTapGesture {
+                model.activeSheet = .panel(item)
+            }
             .gesture(longPressDrag)
             .overlay(alignment: .topTrailing) {
                 hideButton
@@ -356,12 +359,12 @@ struct HiddenPanelsBar: View {
                         } label: {
                             Text("恢复")
                                 .font(Theme.rounded(.caption, weight: .semibold))
-                                .padding(.horizontal, 12)
-                                .frame(height: 32)
-                                .contentShape(.capsule)
+                                .padding(.horizontal, 14)
+                                .frame(minWidth: 64, minHeight: 44)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .contentShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive(), in: .capsule)
                         .accessibilityLabel("重新添加\(item.title)")
                     }
                     .padding(.horizontal, 14)
@@ -372,17 +375,23 @@ struct HiddenPanelsBar: View {
                     }
                 }
             }
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(colorScheme == .dark ? 0.04 : 0.3))
+            .background {
+                if colorScheme == .dark {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(Color.white.opacity(0.04))
+                        }
+                } else {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(Color.white.opacity(0.32))
+                }
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
+                    .allowsHitTesting(false)
             }
         }
     }
