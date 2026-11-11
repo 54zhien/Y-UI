@@ -5,13 +5,9 @@ struct HomeView: View {
     @State private var model = HomeModel()
     @State private var path: [WarRoute] = []
     @State private var searchHistory = SearchHistory()
-    @State private var progress: CGFloat = 0
     @State private var isCollapsed = false
     @State private var isKeyboardInput = false
     @State private var keyboardText = ""
-    @State private var scrollProxy: ScrollViewProxy?
-    @State private var lastOffset: CGFloat = 0
-    @State private var isUserDragging = false
     @Namespace private var warNamespace
     @Namespace private var topLeftNamespace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -25,7 +21,7 @@ struct HomeView: View {
     }
 
     private var collapseThreshold: CGFloat {
-        min(max(KeyboardPreviewCard.preferredHeight * 0.78, 120), 260)
+        KeyboardPreviewCard.preferredHeight * 0.78
     }
 
     private var expandThreshold: CGFloat { 26 }
@@ -38,18 +34,15 @@ struct HomeView: View {
                 ZStack(alignment: .bottom) {
                     DiffuseBackground()
 
-                    ScrollViewReader { reader in
-                        scroll(reader: reader)
-                            .onAppear { scrollProxy = reader }
-                            .safeAreaBar(edge: .top, spacing: 0) {
-                                topBar
-                            }
-                            .safeAreaBar(edge: .bottom, spacing: 0) {
-                                Color.clear
-                                    .frame(height: Theme.dockControlSize + 24)
-                                    .allowsHitTesting(false)
-                            }
-                    }
+                    scroll
+                        .safeAreaBar(edge: .top, spacing: 0) {
+                            topBar
+                        }
+
+                    GradientMaskedBlur(edge: .bottom)
+                        .frame(height: Theme.dockControlSize + 44)
+                        .allowsHitTesting(false)
+                        .ignoresSafeArea(.container, edges: .bottom)
 
                     if !isKeyboardInput && !model.isSearchingHome {
                         BottomDock(
@@ -98,21 +91,20 @@ struct HomeView: View {
         }
     }
 
-    private func scroll(reader: ScrollViewProxy) -> some View {
+    private var scroll: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 18) {
-                Color.clear
-                    .frame(height: 0)
-                    .id("topAnchor")
-
-                previewSection
+                if !model.isEditing {
+                    KeyboardPreviewCard()
+                        .padding(.top, 6)
+                        .transition(.opacity)
+                }
 
                 Text("你的设置")
                     .font(Theme.rounded(.footnote, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4)
                     .accessibilityAddTraits(.isHeader)
-                    .id("settingsTitle")
 
                 PanelGrid(model: model)
 
@@ -126,35 +118,14 @@ struct HomeView: View {
             .animation(.easeInOut(duration: 0.5), value: model.isEditing)
         }
         .scrollIndicators(.hidden)
-        .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+        .scrollEdgeEffectStyle(.soft, for: .top)
         .blur(radius: isObscured ? 18 : 0)
         .animation(.easeInOut(duration: 0.42), value: isObscured)
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
             max(geometry.contentOffset.y + geometry.contentInsets.top, 0)
         } action: { _, offset in
-            lastOffset = offset
-            guard isUserDragging else { return }
-            if isCollapsed {
-                if offset < expandThreshold {
-                    expand()
-                }
-            } else {
-                updateProgress(offset)
-            }
-        }
-        .onScrollPhaseChange { _, phase in
-            handlePhaseChange(phase)
-        }
-    }
-
-    @ViewBuilder
-    private var previewSection: some View {
-        if !model.isEditing && !isCollapsed {
-            KeyboardPreviewCard()
-                .opacity(Double(1 - progress))
-                .scaleEffect(1 - min(progress, 1) * 0.05, anchor: .topLeading)
-                .allowsHitTesting(false)
-                .transition(.opacity)
+            guard !model.isEditing else { return }
+            updateCollapse(offset)
         }
     }
 
@@ -171,8 +142,6 @@ struct HomeView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .frame(minHeight: Theme.controlSize, alignment: .leading)
-                    .opacity(Double(1 - progress))
-                    .blur(radius: progress * 6)
                     .accessibilityAddTraits(.isHeader)
             }
 
@@ -231,78 +200,29 @@ struct HomeView: View {
         .accessibilityLabel(label)
     }
 
-    private func handlePhaseChange(_ phase: ScrollPhase) {
-        let interacting = phase == .interacting
-        if interacting && !isUserDragging && isCollapsed {
-            isUserDragging = true
-            if lastOffset < expandThreshold {
-                expand()
-                return
+    private func updateCollapse(_ offset: CGFloat) {
+        if !isCollapsed && offset > collapseThreshold {
+            if reduceMotion {
+                isCollapsed = true
+            } else {
+                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                    isCollapsed = true
+                }
             }
-        }
-        if interacting {
-            isUserDragging = true
             return
         }
-        if isUserDragging {
-            isUserDragging = false
-            if phase == .idle {
-                if !isCollapsed && lastOffset > collapseThreshold {
-                    collapse()
+
+        if isCollapsed && offset < expandThreshold {
+            if reduceMotion {
+                isCollapsed = false
+            } else {
+                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                    isCollapsed = false
                 }
             }
         }
     }
 
-    private func updateProgress(_ offset: CGFloat) {
-        guard !isCollapsed else { return }
-        let raw = min(max(offset / collapseThreshold, 0), 1)
-        let eased = raw * raw * (3 - 2 * raw)
-        let target = reduceMotion ? (eased > 0.5 ? CGFloat(1) : 0) : eased
-        if abs(target - progress) > 0.01 {
-            progress = target
-        }
-    }
-
-    private func collapse() {
-        if reduceMotion {
-            isCollapsed = true
-            progress = 1
-            anchorToSettings()
-        } else {
-            withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
-                isCollapsed = true
-                progress = 1
-            }
-            anchorToSettings()
-        }
-    }
-
-    private func expand() {
-        if reduceMotion {
-            isCollapsed = false
-            progress = 0
-            anchorToTop()
-        } else {
-            withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
-                isCollapsed = false
-                progress = 0
-            }
-            anchorToTop()
-        }
-    }
-
-    private func anchorToSettings() {
-        DispatchQueue.main.async {
-            scrollProxy?.scrollTo("settingsTitle", anchor: .top)
-        }
-    }
-
-    private func anchorToTop() {
-        DispatchQueue.main.async {
-            scrollProxy?.scrollTo("topAnchor", anchor: .top)
-        }
-    }
     @ViewBuilder
     private func destination(for route: WarRoute) -> some View {
         switch route {

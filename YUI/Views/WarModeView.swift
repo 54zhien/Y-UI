@@ -54,6 +54,7 @@ struct WarModeView: View {
                         }
                     }
                 )
+                .padding(.bottom, 14)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
