@@ -9,9 +9,9 @@ struct HomeView: View {
     @State private var isCollapsed = false
     @State private var isKeyboardInput = false
     @State private var keyboardText = ""
-    @State private var isScrolling = false
     @State private var scrollProxy: ScrollViewProxy?
-    @State private var suppressExpandUntil: Date = .distantPast
+    @State private var lastOffset: CGFloat = 0
+    @State private var isUserDragging = false
     @Namespace private var warNamespace
     @Namespace private var topLeftNamespace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -44,6 +44,11 @@ struct HomeView: View {
                             .safeAreaBar(edge: .top, spacing: 0) {
                                 topBar
                             }
+                            .safeAreaBar(edge: .bottom, spacing: 0) {
+                                Color.clear
+                                    .frame(height: Theme.dockControlSize + 24)
+                                    .allowsHitTesting(false)
+                            }
                     }
 
                     if !isKeyboardInput && !model.isSearchingHome {
@@ -59,6 +64,7 @@ struct HomeView: View {
                         .opacity(model.isEditing ? 0 : 1)
                         .allowsHitTesting(!model.isEditing)
                         .animation(.easeInOut(duration: 0.5), value: model.isEditing)
+                        .ignoresSafeArea(.container, edges: .bottom)
                     }
 
                     if model.isSearchingHome || isKeyboardInput {
@@ -78,7 +84,6 @@ struct HomeView: View {
                             }
                         )
                         .padding(.bottom, keyboardGap)
-                        .padding(.bottom, proxy.safeAreaInsets.bottom)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
@@ -127,10 +132,18 @@ struct HomeView: View {
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
             max(geometry.contentOffset.y + geometry.contentInsets.top, 0)
         } action: { _, offset in
-            updateCollapse(offset)
+            lastOffset = offset
+            guard isUserDragging else { return }
+            if isCollapsed {
+                if offset < expandThreshold {
+                    expand()
+                }
+            } else {
+                updateProgress(offset)
+            }
         }
         .onScrollPhaseChange { _, phase in
-            isScrolling = phase == .interacting || phase == .decelerating
+            handlePhaseChange(phase)
         }
     }
 
@@ -218,64 +231,78 @@ struct HomeView: View {
         .accessibilityLabel(label)
     }
 
-    private func updateCollapse(_ offset: CGFloat) {
+    private func handlePhaseChange(_ phase: ScrollPhase) {
+        let interacting = phase == .interacting
+        if interacting && !isUserDragging && isCollapsed {
+            isUserDragging = true
+            if lastOffset < expandThreshold {
+                expand()
+                return
+            }
+        }
+        if interacting {
+            isUserDragging = true
+            return
+        }
+        if isUserDragging {
+            isUserDragging = false
+            if phase == .idle {
+                if !isCollapsed && lastOffset > collapseThreshold {
+                    collapse()
+                }
+            }
+        }
+    }
+
+    private func updateProgress(_ offset: CGFloat) {
+        guard !isCollapsed else { return }
         let raw = min(max(offset / collapseThreshold, 0), 1)
         let eased = raw * raw * (3 - 2 * raw)
-
-        if !isCollapsed && offset > collapseThreshold {
-            if reduceMotion {
-                isCollapsed = true
-                progress = 1
-            } else {
-                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
-                    isCollapsed = true
-                    progress = 1
-                }
-                anchorToSettings()
-            }
-            return
-        }
-
-        if isCollapsed && isScrolling && Date() > suppressExpandUntil && offset < expandThreshold {
-            if reduceMotion {
-                isCollapsed = false
-                progress = 0
-            } else {
-                withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
-                    isCollapsed = false
-                    progress = 0
-                }
-                anchorToTop()
-            }
-            return
-        }
-
-        guard !isCollapsed else { return }
-
         let target = reduceMotion ? (eased > 0.5 ? CGFloat(1) : 0) : eased
         if abs(target - progress) > 0.01 {
             progress = target
         }
     }
 
-    private func anchorToSettings() {
-        suppressExpandUntil = Date().addingTimeInterval(0.6)
-        DispatchQueue.main.async {
+    private func collapse() {
+        if reduceMotion {
+            isCollapsed = true
+            progress = 1
+            anchorToSettings()
+        } else {
             withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
-                scrollProxy?.scrollTo("settingsTitle", anchor: .top)
+                isCollapsed = true
+                progress = 1
             }
+            anchorToSettings()
+        }
+    }
+
+    private func expand() {
+        if reduceMotion {
+            isCollapsed = false
+            progress = 0
+            anchorToTop()
+        } else {
+            withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                isCollapsed = false
+                progress = 0
+            }
+            anchorToTop()
+        }
+    }
+
+    private func anchorToSettings() {
+        DispatchQueue.main.async {
+            scrollProxy?.scrollTo("settingsTitle", anchor: .top)
         }
     }
 
     private func anchorToTop() {
-        suppressExpandUntil = Date().addingTimeInterval(0.6)
         DispatchQueue.main.async {
-            withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
-                scrollProxy?.scrollTo("topAnchor", anchor: .top)
-            }
+            scrollProxy?.scrollTo("topAnchor", anchor: .top)
         }
     }
-
     @ViewBuilder
     private func destination(for route: WarRoute) -> some View {
         switch route {
