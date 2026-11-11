@@ -22,10 +22,7 @@ struct PanelGrid: View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(model.filteredPanels) { item in
                 PanelTile(item: item, model: model, isEditing: model.isEditing)
-                    .onDrag {
-                        dragging = item
-                        return NSItemProvider(object: item.id as NSString)
-                    }
+                    .modifier(EditOnlyDrag(item: item, enabled: model.isEditing, dragging: $dragging))
                     .onDrop(
                         of: [UTType.text],
                         delegate: PanelDropDelegate(model: model, item: item, dragging: $dragging)
@@ -33,6 +30,41 @@ struct PanelGrid: View {
             }
         }
         .animation(.snappy, value: model.panels)
+    }
+}
+
+struct EditOnlyDrag: ViewModifier {
+
+    let item: PanelItem
+    let enabled: Bool
+    @Binding var dragging: PanelItem?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            draggable(content)
+        } else {
+            content
+        }
+    }
+
+    private func draggable(_ content: Content) -> some View {
+        content
+            .opacity(dragging?.id == item.id ? 0 : 1)
+            .onDrag {
+                dragging = item
+                return NSItemProvider(object: item.id as NSString)
+            } preview: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(item.title, systemImage: item.symbol)
+                        .font(Theme.rounded(.caption, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text(item.value)
+                        .font(Theme.rounded(.headline, weight: .semibold))
+                }
+                .padding(14)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
     }
 }
 
@@ -174,6 +206,8 @@ struct HiddenPanelsBar: View {
 
     let model: HomeModel
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("已隐藏")
@@ -215,6 +249,10 @@ struct HiddenPanelsBar: View {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.04 : 0.24))
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)

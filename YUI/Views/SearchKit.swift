@@ -38,7 +38,7 @@ struct SearchHistoryRow: View {
             }
             .padding(.horizontal, Theme.screenPadding)
         }
-        .frame(height: Theme.controlSize)
+        .frame(height: Theme.historyChipHeight)
     }
 
     private func chip(_ term: String) -> some View {
@@ -51,7 +51,7 @@ struct SearchHistoryRow: View {
                     .lineLimit(1)
                     .padding(.leading, 16)
                     .padding(.trailing, 8)
-                    .frame(height: Theme.controlSize)
+                    .frame(height: Theme.historyChipHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -62,7 +62,7 @@ struct SearchHistoryRow: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .bold))
-                    .frame(width: 30, height: Theme.controlSize)
+                    .frame(width: 26, height: Theme.historyChipHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -114,7 +114,7 @@ struct LiquidSearchBar: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .frame(height: Theme.controlSize)
+                .frame(height: Theme.searchControlSize)
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .overlay {
                     Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
@@ -125,7 +125,7 @@ struct LiquidSearchBar: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .semibold))
-                        .frame(width: Theme.controlSize, height: Theme.controlSize)
+                        .frame(width: Theme.searchControlSize, height: Theme.searchControlSize)
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)

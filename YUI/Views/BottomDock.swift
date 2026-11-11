@@ -6,7 +6,6 @@ struct BottomDock: View {
     var containerSize: CGSize
     var safeArea: EdgeInsets
     var warNamespace: Namespace.ID
-    var searchHistory: SearchHistory
     var onOpenWarMode: () -> Void = {}
     var onOpenSettings: () -> Void = {}
     @State private var didLongPress = false
@@ -15,43 +14,27 @@ struct BottomDock: View {
 
     private var sideInset: CGFloat {
         let corner = Theme.screenCornerRadius(for: containerSize)
-        let alignment = corner - Theme.controlSize / 2
+        let alignment = corner - Theme.dockControlSize / 2
         return max(10, min(alignment, 30))
     }
 
     private var bottomInset: CGFloat {
-        safeArea.bottom > 0 ? max(8, min(sideInset, 28)) : 16
+        max(safeArea.bottom, 8)
     }
 
     private var capsuleWidth: CGFloat {
-        let available = containerSize.width - sideInset * 2 - Theme.controlSize * 2 - spacing * 2
+        let available = containerSize.width - sideInset * 2 - Theme.dockControlSize * 2 - spacing * 2
         return max(available, 96)
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             dockRow
-                .offset(x: model.isSearchingHome ? -(containerSize.width + Theme.controlSize * 2) : 0)
+                .offset(x: model.isSearchingHome ? -(containerSize.width + Theme.dockControlSize * 2) : 0)
                 .allowsHitTesting(!model.isSearchingHome)
                 .accessibilityHidden(model.isSearchingHome)
                 .animation(.snappy(duration: 0.34), value: model.isSearchingHome)
 
-            if model.isSearchingHome {
-                LiquidSearchBar(
-                    text: $model.homeQuery,
-                    placeholder: "搜索面板",
-                    history: searchHistory,
-                    onExit: {
-                        withAnimation(.snappy(duration: 0.34)) {
-                            model.homeQuery = ""
-                            model.isSearchingHome = false
-                        }
-                    }
-                )
-                .transition(.opacity)
-                .padding(.bottom, bottomInset)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -80,8 +63,8 @@ struct BottomDock: View {
     private func circle(symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 20, weight: .medium))
-                .frame(width: Theme.controlSize, height: Theme.controlSize)
+                .font(.system(size: Theme.dockIconSize, weight: .medium))
+                .frame(width: Theme.dockControlSize, height: Theme.dockControlSize)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -101,7 +84,7 @@ struct BottomDock: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: model.warModeEnabled ? "shield.lefthalf.filled" : "shield")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: Theme.dockIconSize, weight: .medium))
 
                 Text("战争模式")
                     .font(Theme.rounded(.footnote, weight: .semibold))
@@ -114,7 +97,7 @@ struct BottomDock: View {
                     .contentTransition(.opacity)
             }
             .padding(.horizontal, 14)
-            .frame(width: capsuleWidth, height: Theme.controlSize)
+            .frame(width: capsuleWidth, height: Theme.dockControlSize)
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)

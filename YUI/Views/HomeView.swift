@@ -13,7 +13,7 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 38
 
-    private let dockReserve: CGFloat = 104
+    private let dockReserve: CGFloat = 112
 
     private var isObscured: Bool {
         !path.isEmpty || model.isSearchingHome || isKeyboardInput
@@ -37,14 +37,11 @@ struct HomeView: View {
 
                     VStack(spacing: 0) {
                         Spacer(minLength: 0)
-                        GradientMaskedBlur(edge: .bottom, opaqueFraction: 0.55)
-                            .frame(height: 84)
                         BottomDock(
                             model: model,
                             containerSize: proxy.size,
-                            safeArea: EdgeInsets(top: 0, leading: 0, bottom: 34, trailing: 0),
+                            safeArea: proxy.safeAreaInsets,
                             warNamespace: warNamespace,
-                            searchHistory: searchHistory,
                             onOpenWarMode: { path.append(.war) },
                             onOpenSettings: { path.append(.settings) }
                         )
@@ -54,24 +51,9 @@ struct HomeView: View {
                         .animation(.snappy(duration: 0.3), value: model.isEditing)
                     }
                     .ignoresSafeArea(.container, edges: .bottom)
-
-                    if isKeyboardInput {
-                        VStack(spacing: 0) {
-                            Spacer(minLength: 0)
-                            LiquidSearchBar(
-                                text: $keyboardText,
-                                placeholder: "打几个字试试",
-                                history: nil,
-                                onExit: {
-                                    withAnimation(.snappy) {
-                                        isKeyboardInput = false
-                                    }
-                                }
-                            )
-                        }
-                        .frame(maxHeight: .infinity, alignment: .bottom)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    bottomInput
                 }
                 .navigationDestination(for: WarRoute.self) { route in
                     destination(for: route)
@@ -81,6 +63,34 @@ struct HomeView: View {
         }
         .sheet(item: $model.activeSheet) { route in
             DemoSheet(route: route)
+        }
+    }
+
+    @ViewBuilder
+    private var bottomInput: some View {
+        if model.isSearchingHome {
+            LiquidSearchBar(
+                text: $model.homeQuery,
+                placeholder: "搜索面板",
+                history: searchHistory,
+                onExit: {
+                    withAnimation(.snappy(duration: 0.3)) {
+                        model.homeQuery = ""
+                        model.isSearchingHome = false
+                    }
+                }
+            )
+        } else if isKeyboardInput {
+            LiquidSearchBar(
+                text: $keyboardText,
+                placeholder: "打几个字试试",
+                history: nil,
+                onExit: {
+                    withAnimation(.snappy) {
+                        isKeyboardInput = false
+                    }
+                }
+            )
         }
     }
 
@@ -125,25 +135,18 @@ struct HomeView: View {
         }
     }
 
+    @ViewBuilder
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
+        if !model.isEditing {
             Text("PureGlass")
                 .font(.system(size: titleSize, weight: .bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .opacity(Double(1 - progress))
                 .blur(radius: progress * 6)
+                .frame(minHeight: Theme.controlSize, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
-
-            Spacer(minLength: 8)
-
-            manageButton
-                .opacity(Double(1 - progress))
-                .blur(radius: progress * 8)
-                .allowsHitTesting(!isCollapsed && !model.isEditing)
-                .accessibilityHidden(isCollapsed || model.isEditing)
         }
-        .frame(minHeight: Theme.controlSize)
     }
 
     private var previewCard: some View {
@@ -156,23 +159,23 @@ struct HomeView: View {
 
     private var topBar: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .top) {
-                GradientMaskedBlur(edge: .top, opaqueFraction: 0.46)
-                    .frame(height: 92)
-
-                HStack(spacing: 8) {
-                    topLeftControl
-                    Spacer(minLength: 8)
-                    if isCollapsed || model.isEditing {
-                        manageButton
-                    }
-                }
-                .padding(.horizontal, Theme.screenPadding)
-                .padding(.top, 6)
+            HStack(spacing: 8) {
+                topLeftControl
+                Spacer(minLength: 8)
+                manageButton
+                    .opacity(Double(1 - progress))
+                    .blur(radius: progress * 6)
+                    .allowsHitTesting(path.isEmpty && progress < 0.5 && !model.isEditing)
+                    .accessibilityHidden(!path.isEmpty || progress >= 0.5 || model.isEditing)
             }
+            .padding(.horizontal, Theme.screenPadding)
+            .padding(.top, 6)
 
             Spacer(minLength: 0)
         }
+        .opacity(path.isEmpty ? 1 : 0)
+        .allowsHitTesting(path.isEmpty)
+        .accessibilityHidden(!path.isEmpty)
     }
 
     @ViewBuilder
@@ -216,7 +219,7 @@ struct HomeView: View {
     private func circleButton(symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 20, weight: .medium))
+                .font(.system(size: Theme.controlIconSize, weight: .medium))
                 .frame(width: Theme.controlSize, height: Theme.controlSize)
                 .contentShape(Circle())
         }

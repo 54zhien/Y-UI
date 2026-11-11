@@ -56,10 +56,6 @@ struct SettingsDemoView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .top, spacing: 0) { header }
-        .overlay(alignment: .top) {
-            GradientMaskedBlur(edge: .top, opaqueFraction: 0.46)
-                .frame(height: 92)
-        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if isSearching {
                 LiquidSearchBar(
@@ -74,12 +70,6 @@ struct SettingsDemoView: View {
                     }
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if !isSearching {
-                GradientMaskedBlur(edge: .bottom, opaqueFraction: 0.55)
-                    .frame(height: 84)
             }
         }
     }

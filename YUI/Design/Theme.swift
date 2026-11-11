@@ -4,6 +4,16 @@ enum Theme {
 
     static let controlSize: CGFloat = 48
 
+    static let controlIconSize: CGFloat = 20
+
+    static let dockControlSize: CGFloat = 60
+
+    static let dockIconSize: CGFloat = 26
+
+    static let searchControlSize: CGFloat = 44
+
+    static let historyChipHeight: CGFloat = 36
+
     static let minHitSize: CGFloat = 44
 
     static let fadeHeight: CGFloat = 96
