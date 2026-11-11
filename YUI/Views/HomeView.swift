@@ -174,7 +174,7 @@ struct HomeView: View {
                         .glassEffect(.regular, in: .capsule)
                         .opacity(Double(max((collapseProgress - 0.82) / 0.18, 0)))
                 }
-                .offset(x: (1 - collapseProgress) * -80)
+                .offset(x: (1 - collapseProgress) * -90)
                 .allowsHitTesting(false)
                 .accessibilityAddTraits(.isHeader)
         }
