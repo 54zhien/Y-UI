@@ -133,8 +133,7 @@ struct LiquidSearchBar: View {
                 .accessibilityLabel("退出搜索")
             }
             .padding(.horizontal, Theme.screenPadding)
-        }
-        .padding(.bottom, 8)
+        }
         .task {
             try? await Task.sleep(for: .milliseconds(120))
             focused = true

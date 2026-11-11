@@ -28,7 +28,20 @@
                                                                                          0
                                                                                      ]
                                                        }
-                                      },
+                                      }
+                                  ],
+                       "shadow":  {
+                                      "kind":  "neutral",
+                                      "opacity":  0.65
+                                  },
+                       "specular":  true,
+                       "translucency":  {
+                                            "enabled":  true,
+                                            "value":  0.32
+                                        }
+                   },
+                   {
+                       "layers":  [
                                       {
                                           "glass":  false,
                                           "hidden":  false,
@@ -44,14 +57,10 @@
                                                        }
                                       }
                                   ],
-                       "shadow":  {
-                                      "kind":  "neutral",
-                                      "opacity":  0.5
-                                  },
-                       "specular":  true,
+                       "specular":  false,
                        "translucency":  {
-                                            "enabled":  true,
-                                            "value":  0.32
+                                            "enabled":  false,
+                                            "value":  0.5
                                         }
                    }
                ],

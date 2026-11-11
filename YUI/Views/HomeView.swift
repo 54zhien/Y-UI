@@ -14,13 +14,14 @@ struct HomeView: View {
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 38
 
     private let dockReserve: CGFloat = 112
+    private let topBarHeight: CGFloat = 60
 
     private var isObscured: Bool {
         !path.isEmpty || model.isSearchingHome || isKeyboardInput
     }
 
     private var isCollapsed: Bool {
-        progress > 0.5
+        progress >= 0.9
     }
 
     var body: some View {
@@ -33,25 +34,11 @@ struct HomeView: View {
 
                     scroll
 
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 0)
-                        BottomDock(
-                            model: model,
-                            containerSize: proxy.size,
-                            safeArea: proxy.safeAreaInsets,
-                            warNamespace: warNamespace,
-                            onOpenWarMode: { path.append(.war) },
-                            onOpenSettings: { path.append(.settings) }
-                        )
-                        .offset(y: model.isEditing ? 150 : 0)
-                        .opacity(model.isEditing ? 0 : 1)
-                        .allowsHitTesting(!model.isEditing)
-                        .animation(.snappy(duration: 0.3), value: model.isEditing)
-                    }
-                    .ignoresSafeArea(.container, edges: .bottom)
-                }
-                .safeAreaInset(edge: .top, spacing: 0) {
+                    dockLayer(proxy)
+
                     topBar
+
+
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     bottomInput
@@ -92,17 +79,36 @@ struct HomeView: View {
                     }
                 }
             )
+            .matchedGeometryEffect(id: "keyboardInput", in: topLeftNamespace)
         }
+    }
+
+    private func dockLayer(_ proxy: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            BottomDock(
+                model: model,
+                containerSize: proxy.size,
+                safeArea: proxy.safeAreaInsets,
+                warNamespace: warNamespace,
+                onOpenWarMode: { path.append(.war) },
+                onOpenSettings: { path.append(.settings) }
+            )
+            .offset(y: model.isEditing || isKeyboardInput ? 150 : 0)
+            .opacity(model.isEditing || isKeyboardInput ? 0 : 1)
+            .allowsHitTesting(!model.isEditing && !isKeyboardInput)
+            .animation(.snappy(duration: 0.3), value: model.isEditing)
+            .animation(.snappy(duration: 0.3), value: isKeyboardInput)
+        }
+        .frame(maxHeight: .infinity, alignment: .bottom)
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     private var scroll: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 18) {
-                header
-
                 if !model.isEditing {
-                    previewCard
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                    titleBlock
                 }
 
                 PanelGrid(model: model)
@@ -112,13 +118,15 @@ struct HomeView: View {
                 }
             }
             .padding(.horizontal, Theme.screenPadding)
-            .padding(.top, 10)
+            .padding(.top, 8)
             .padding(.bottom, dockReserve)
-            .animation(.snappy, value: model.isEditing)
+            .animation(.snappy(duration: 0.24), value: isCollapsed)
+            .animation(.snappy(duration: 0.24), value: model.isEditing)
         }
         .scrollIndicators(.hidden)
         .scrollEdgeEffectStyle(.soft, for: .top)
         .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .contentMargins(.top, topBarHeight, for: .scrollContent)
         .blur(radius: isObscured ? 18 : 0)
         .animation(.snappy(duration: 0.26), value: isObscured)
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -140,41 +148,41 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private var header: some View {
-        if !model.isEditing {
-            Text("PureGlass")
-                .font(.system(size: titleSize, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .opacity(Double(1 - progress))
-                .blur(radius: progress * 6)
-                .frame(minHeight: Theme.controlSize, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
+    private var titleBlock: some View {
+        if !isCollapsed {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("PureGlass")
+                    .font(.system(size: titleSize, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .opacity(Double(1 - progress))
+                    .blur(radius: progress * 6)
+                    .frame(minHeight: Theme.controlSize, alignment: .leading)
+                    .accessibilityAddTraits(.isHeader)
+
+                KeyboardPreviewCard()
+                    .opacity(Double(1 - progress))
+                    .scaleEffect(1 - progress * 0.05, anchor: .topLeading)
+                    .accessibilityHidden(progress > 0.5)
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
-    private var previewCard: some View {
-        KeyboardPreviewCard()
-            .scaleEffect(1 - progress * 0.06, anchor: .topLeading)
-            .opacity(Double(1 - progress))
-            .allowsHitTesting(progress < 0.5)
-            .accessibilityHidden(progress > 0.5)
-    }
-
     private var topBar: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                topLeftControl
-                Spacer(minLength: 8)
+        HStack(spacing: 8) {
+            topLeftControl
+            Spacer(minLength: 8)
+            if !isKeyboardInput {
                 manageButton
                     .allowsHitTesting(path.isEmpty)
                     .accessibilityHidden(!path.isEmpty)
             }
-            .padding(.horizontal, Theme.screenPadding)
-            .padding(.top, 6)
-
-            Spacer(minLength: 0)
         }
+        .padding(.horizontal, Theme.screenPadding)
+        .padding(.vertical, 6)
+        .frame(height: topBarHeight)
+        .frame(maxWidth: .infinity)
         .opacity(path.isEmpty ? 1 : 0)
         .allowsHitTesting(path.isEmpty)
         .accessibilityHidden(!path.isEmpty)
@@ -185,9 +193,9 @@ struct HomeView: View {
         if model.isEditing {
             exitEditButton
                 .matchedGeometryEffect(id: "topLeftControl", in: topLeftNamespace)
-        } else if isCollapsed {
+        } else if isCollapsed && !isKeyboardInput {
             keyboardCircle
-                .matchedGeometryEffect(id: "topLeftControl", in: topLeftNamespace)
+                .matchedGeometryEffect(id: "keyboardInput", in: topLeftNamespace)
         }
     }
 

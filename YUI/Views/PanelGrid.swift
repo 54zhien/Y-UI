@@ -11,6 +11,8 @@ struct PanelGrid: View {
     @State private var startFrame: CGRect = .zero
     @State private var currentPoint: CGPoint = .zero
     @State private var frames: [String: CGRect] = [:]
+    @State private var liftFrames: [String: CGRect] = [:]
+    @State private var lastTargetID: String?
     @State private var settleTask: Task<Void, Never>?
 
     enum DragPhase: Equatable {
@@ -72,13 +74,14 @@ struct PanelGrid: View {
                             )
                         }
                     }
+                    .contentShape(RoundedRectangle(cornerRadius: Theme.panelCornerRadius, style: .continuous))
                     .gesture(model.isEditing ? dragGesture(item) : nil)
             }
         }
     }
 
     private func dragGesture(_ item: PanelItem) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.3)
+        LongPressGesture(minimumDuration: 0.45)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(space)))
             .onChanged { value in
                 switch value {
@@ -107,6 +110,8 @@ struct PanelGrid: View {
         settleTask?.cancel()
         draggedItem = item
         draggedID = item.id
+        liftFrames = frames
+        lastTargetID = nil
         startFrame = frames[item.id] ?? .zero
         currentPoint = CGPoint(x: startFrame.midX, y: startFrame.midY)
         withAnimation(.snappy(duration: 0.16)) {
@@ -130,14 +135,17 @@ struct PanelGrid: View {
               let currentIndex = model.panels.firstIndex(where: { $0.id == itemID })
         else { return }
 
-        let hit = frames.first { key, rect in
+        let hit = liftFrames.first { key, rect in
             key != itemID && rect.contains(point)
         }?.key
 
         guard let hit,
+              hit != lastTargetID,
               let targetIndex = model.panels.firstIndex(where: { $0.id == hit }),
               targetIndex != currentIndex
         else { return }
+
+        lastTargetID = hit
 
         withAnimation(.snappy) {
             model.move(from: currentIndex, to: targetIndex)
@@ -181,6 +189,8 @@ struct PanelGrid: View {
         settleTask?.cancel()
         draggedItem = nil
         draggedID = nil
+        liftFrames = [:]
+        lastTargetID = nil
         phase = .idle
     }
 
