@@ -3,6 +3,7 @@ import SwiftUI
 struct KeyboardPreviewCard: View {
 
     static let preferredHeight: CGFloat = 214
+    var morphProgress: CGFloat = 0
 
 
     @Environment(\.colorScheme) private var colorScheme
@@ -23,11 +24,12 @@ struct KeyboardPreviewCard: View {
     ]
 
     var body: some View {
-        GlassCard(style: .liquid, cornerRadius: Theme.panelCornerRadius) {
+        GlassCard(style: .liquid, cornerRadius: Theme.panelCornerRadius + 82 * morphProgress) {
             VStack(alignment: .leading, spacing: 14) {
                 keyboard
             }
             .padding(16)
+            .opacity(Double(1 - morphProgress))
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("键盘预览，静态演示")

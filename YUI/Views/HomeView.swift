@@ -90,7 +90,7 @@ struct HomeView: View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 44) {
                 if !model.isEditing {
-                    KeyboardPreviewCard()
+                    KeyboardPreviewCard(morphProgress: collapseProgress)
                         .padding(.top, 28)
                         .visualEffect { content, geometry in
                             let frame = geometry.frame(in: .global)
@@ -101,7 +101,7 @@ struct HomeView: View {
                                     y: collapseProgress * (topInset + Theme.controlSize / 2 + 6 - frame.midY)
                                 )
                         }
-                        .opacity(Double(1 - max((collapseProgress - 0.72) / 0.28, 0)))
+                        .opacity(Double(1 - max((collapseProgress - 0.88) / 0.12, 0)))
                         .frame(height: (KeyboardPreviewCard.preferredHeight + 28) * (1 - collapseProgress), alignment: .top)
                         .zIndex(1)
                         .allowsHitTesting(collapseProgress < 0.05)
@@ -165,7 +165,7 @@ struct HomeView: View {
                 .background {
                     Capsule()
                         .glassEffect(.regular, in: .capsule)
-                        .opacity(Double(collapseProgress))
+                        .opacity(Double(max((collapseProgress - 0.82) / 0.18, 0)))
                 }
                 .offset(x: (1 - collapseProgress) * -80)
                 .allowsHitTesting(false)
