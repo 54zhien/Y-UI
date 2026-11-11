@@ -15,3 +15,5 @@ ci-job*.log
 
 ci-run*/
 ci-run-latest/
+
+IPA/
