@@ -10,6 +10,8 @@ struct HomeView: View {
     @State private var isKeyboardInput = false
     @State private var keyboardText = ""
     @State private var isScrolling = false
+    @State private var scrollProxy: ScrollViewProxy?
+    @State private var suppressExpandUntil: Date = .distantPast
     @Namespace private var warNamespace
     @Namespace private var topLeftNamespace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -36,10 +38,13 @@ struct HomeView: View {
                 ZStack(alignment: .bottom) {
                     DiffuseBackground()
 
-                    scroll
-                        .safeAreaBar(edge: .top, spacing: 0) {
-                            topBar
-                        }
+                    ScrollViewReader { reader in
+                        scroll(reader: reader)
+                            .onAppear { scrollProxy = reader }
+                            .safeAreaBar(edge: .top, spacing: 0) {
+                                topBar
+                            }
+                    }
 
                     if !isKeyboardInput && !model.isSearchingHome {
                         BottomDock(
@@ -88,9 +93,13 @@ struct HomeView: View {
         }
     }
 
-    private var scroll: some View {
+    private func scroll(reader: ScrollViewReader) -> some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 18) {
+                Color.clear
+                    .frame(height: 0)
+                    .id("topAnchor")
+
                 previewSection
 
                 Text("你的设置")
@@ -98,6 +107,7 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4)
                     .accessibilityAddTraits(.isHeader)
+                    .id("settingsTitle")
 
                 PanelGrid(model: model)
 
@@ -124,21 +134,15 @@ struct HomeView: View {
         }
     }
 
+    @ViewBuilder
     private var previewSection: some View {
-        ZStack(alignment: .topLeading) {
+        if !model.isEditing && !isCollapsed {
             KeyboardPreviewCard()
-                .opacity(model.isEditing || isCollapsed ? 0 : Double(1 - progress))
-                .scaleEffect(isCollapsed ? 0.94 : 1 - min(progress, 1) * 0.05, anchor: .topLeading)
+                .opacity(Double(1 - progress))
+                .scaleEffect(1 - min(progress, 1) * 0.05, anchor: .topLeading)
                 .allowsHitTesting(false)
-                .accessibilityHidden(model.isEditing || isCollapsed)
-
-            Color.clear
-                .frame(height: KeyboardPreviewCard.preferredHeight)
-                .allowsHitTesting(false)
+                .transition(.opacity)
         }
-        .frame(height: model.isEditing ? 0 : KeyboardPreviewCard.preferredHeight)
-        .clipped()
-        .animation(.easeInOut(duration: 0.45), value: model.isEditing)
     }
 
     private var topBar: some View {
@@ -227,11 +231,12 @@ struct HomeView: View {
                     isCollapsed = true
                     progress = 1
                 }
+                anchorToSettings()
             }
             return
         }
 
-        if isCollapsed && isScrolling && offset < expandThreshold {
+        if isCollapsed && isScrolling && Date() > suppressExpandUntil && offset < expandThreshold {
             if reduceMotion {
                 isCollapsed = false
                 progress = 0
@@ -240,6 +245,7 @@ struct HomeView: View {
                     isCollapsed = false
                     progress = 0
                 }
+                anchorToTop()
             }
             return
         }
@@ -249,6 +255,24 @@ struct HomeView: View {
         let target = reduceMotion ? (eased > 0.5 ? CGFloat(1) : 0) : eased
         if abs(target - progress) > 0.01 {
             progress = target
+        }
+    }
+
+    private func anchorToSettings() {
+        suppressExpandUntil = Date().addingTimeInterval(0.6)
+        DispatchQueue.main.async {
+            withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                scrollProxy?.scrollTo("settingsTitle", anchor: .top)
+            }
+        }
+    }
+
+    private func anchorToTop() {
+        suppressExpandUntil = Date().addingTimeInterval(0.6)
+        DispatchQueue.main.async {
+            withAnimation(.spring(duration: 0.45, bounce: 0.08)) {
+                scrollProxy?.scrollTo("topAnchor", anchor: .top)
+            }
         }
     }
 
