@@ -9,7 +9,7 @@ private struct HomeScrollKey: PreferenceKey {
 
 struct EdgeFade: View {
 
-    enum Edge {
+    enum Edge: Equatable {
         case top
         case bottom
     }

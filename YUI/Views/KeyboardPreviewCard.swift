@@ -5,6 +5,20 @@ struct KeyboardPreviewCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+
+    private let candidates = ["Y 键盘", "智能", "自己的键盘", "你好", "大"]
+    private let symbolColumn = ["?", ",", "。", "!"]
+    private let letterRows = [
+        ["@#", "ABC", "DEF"],
+        ["GHI", "JKL", "MNO"],
+        ["PQRS", "TUV", "WXYZ"]
+    ]
+    private let functionColumn: [PreviewKey] = [
+        .symbol("delete.left"),
+        .text("换行"),
+        .symbol("return")
+    ]
+
     var body: some View {
         GlassCard(style: .liquid, cornerRadius: Theme.panelCornerRadius) {
             VStack(alignment: .leading, spacing: 14) {
