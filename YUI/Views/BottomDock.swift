@@ -14,8 +14,7 @@ struct BottomDock: View {
 
     private var sideInset: CGFloat {
         let corner = Theme.screenCornerRadius(for: containerSize)
-        let alignment = corner - Theme.dockControlSize / 2
-        return max(10, min(alignment, 30))
+        return max(8, corner - Theme.dockControlSize / 2)
     }
 
     private var cornerCenterInset: CGFloat {
@@ -24,7 +23,7 @@ struct BottomDock: View {
     }
 
     private var bottomInset: CGFloat {
-        8
+        max(8, cornerCenterInset - safeArea.bottom)
     }
 
     private var capsuleWidth: CGFloat {

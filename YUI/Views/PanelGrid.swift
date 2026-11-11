@@ -241,9 +241,6 @@ struct PanelTile: View {
     private var editableCard: some View {
         cardContent(showsEditRow: true)
             .contentShape(RoundedRectangle(cornerRadius: Theme.panelCornerRadius, style: .continuous))
-            .onTapGesture {
-                model.activeSheet = .panel(item)
-            }
             .gesture(longPressDrag)
             .overlay(alignment: .topTrailing) {
                 hideButton

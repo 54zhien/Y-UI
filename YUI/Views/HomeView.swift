@@ -89,12 +89,12 @@ struct HomeView: View {
 
     private var scroll: some View {
         ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 28) {
                 if !model.isEditing {
                     KeyboardPreviewCard()
                         .padding(.top, 6)
-                        .scaleEffect(1 - collapseProgress * 0.78, anchor: .top)
-                        .offset(y: -collapseProgress * KeyboardPreviewCard.preferredHeight * 0.65)
+                        .scaleEffect(x: 1 - collapseProgress * 0.76, y: 1 - collapseProgress * 0.82, anchor: .top)
+                        .offset(y: -collapseProgress * KeyboardPreviewCard.preferredHeight * 0.72)
                         .opacity(Double(1 - collapseProgress))
                         .frame(height: KeyboardPreviewCard.preferredHeight * (1 - collapseProgress))
                         .clipped()
@@ -138,6 +138,7 @@ struct HomeView: View {
             } else if collapseProgress > 0.6 {
                 keyboardCircle
                     .matchedGeometryEffect(id: "keyboardInput", in: topLeftNamespace)
+                    .opacity(Double(min(max((collapseProgress - 0.6) / 0.4, 0), 1)))
             }
 
             Spacer(minLength: 8)
@@ -206,7 +207,8 @@ struct HomeView: View {
     }
 
     private func updateCollapse(_ offset: CGFloat) {
-        collapseProgress = min(max(offset / collapseThreshold, 0), 1)
+        let threshold = collapseThreshold
+        collapseProgress = offset < threshold ? 0 : min(max((offset - threshold) / KeyboardPreviewCard.preferredHeight, 0), 1)
         if !isCollapsed && offset > collapseThreshold {
             if reduceMotion {
                 isCollapsed = true
