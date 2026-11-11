@@ -35,7 +35,7 @@ struct HomeView: View {
                 ZStack(alignment: .bottom) {
                     DiffuseBackground()
 
-                    scroll
+                    scroll(screenSize: proxy.size, topInset: proxy.safeAreaInsets.top)
                         .safeAreaBar(edge: .top, spacing: 0) {
                             topBar
                         }
@@ -53,7 +53,6 @@ struct HomeView: View {
                         .opacity(model.isEditing ? 0 : 1)
                         .allowsHitTesting(!model.isEditing)
                         .animation(.easeInOut(duration: 0.5), value: model.isEditing)
-                        .ignoresSafeArea(.container, edges: .bottom)
                     }
 
                     if model.isSearchingHome || isKeyboardInput {
@@ -87,17 +86,24 @@ struct HomeView: View {
         }
     }
 
-    private var scroll: some View {
+    private func scroll(screenSize: CGSize, topInset: CGFloat) -> some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 28) {
                 if !model.isEditing {
                     KeyboardPreviewCard()
-                        .padding(.top, 6)
-                        .scaleEffect(x: 1 - collapseProgress * 0.76, y: 1 - collapseProgress * 0.82, anchor: .top)
-                        .offset(y: -collapseProgress * KeyboardPreviewCard.preferredHeight * 0.72)
+                        .padding(.top, 24)
+                        .visualEffect { content, geometry in
+                            let frame = geometry.frame(in: .global)
+                            return content
+                                .scaleEffect(x: 1 - collapseProgress * 0.76, y: 1 - collapseProgress * 0.82)
+                                .offset(
+                                    x: collapseProgress * (screenSize.width / 2 - frame.midX),
+                                    y: collapseProgress * (topInset + 18 - frame.midY)
+                                )
+                        }
                         .opacity(Double(1 - collapseProgress))
-                        .frame(height: KeyboardPreviewCard.preferredHeight * (1 - collapseProgress))
-                        .clipped()
+                        .frame(height: (KeyboardPreviewCard.preferredHeight + 24) * (1 - collapseProgress), alignment: .top)
+                        .zIndex(1)
                         .allowsHitTesting(collapseProgress < 0.05)
                 }
 
@@ -135,10 +141,10 @@ struct HomeView: View {
         HStack(alignment: .center, spacing: 12) {
             if model.isEditing {
                 exitEditButton
-            } else if collapseProgress > 0.6 {
+            } else if collapseProgress > 0 {
                 keyboardCircle
                     .matchedGeometryEffect(id: "keyboardInput", in: topLeftNamespace)
-                    .opacity(Double(min(max((collapseProgress - 0.6) / 0.4, 0), 1)))
+                    .opacity(Double(collapseProgress))
             }
 
             Spacer(minLength: 8)
@@ -208,7 +214,7 @@ struct HomeView: View {
 
     private func updateCollapse(_ offset: CGFloat) {
         let threshold = collapseThreshold
-        collapseProgress = offset < threshold ? 0 : min(max((offset - threshold) / KeyboardPreviewCard.preferredHeight, 0), 1)
+        collapseProgress = reduceMotion ? (offset >= threshold ? 1 : 0) : min(max(offset / threshold, 0), 1)
         if !isCollapsed && offset > collapseThreshold {
             if reduceMotion {
                 isCollapsed = true

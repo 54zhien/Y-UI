@@ -11,7 +11,6 @@ struct PanelGrid: View {
     @State private var startFrame: CGRect = .zero
     @State private var currentPoint: CGPoint = .zero
     @State private var frames: [String: CGRect] = [:]
-    @State private var liftFrames: [String: CGRect] = [:]
     @State private var lastTargetID: String?
     @State private var settleTask: Task<Void, Never>?
 
@@ -94,10 +93,10 @@ struct PanelGrid: View {
     }
 
     private func beginLift(_ item: PanelItem) {
+        guard phase == .idle, model.isEditing, frames[item.id] != nil else { return }
         settleTask?.cancel()
         draggedItem = item
         draggedID = item.id
-        liftFrames = frames
         lastTargetID = nil
         startFrame = frames[item.id] ?? .zero
         currentPoint = CGPoint(x: startFrame.midX, y: startFrame.midY)
@@ -122,7 +121,7 @@ struct PanelGrid: View {
               let currentIndex = model.panels.firstIndex(where: { $0.id == itemID })
         else { return }
 
-        let hit = liftFrames.first { key, rect in
+        let hit = frames.first { key, rect in
             key != itemID && rect.contains(point)
         }?.key
 
@@ -176,7 +175,6 @@ struct PanelGrid: View {
         settleTask?.cancel()
         draggedItem = nil
         draggedID = nil
-        liftFrames = [:]
         lastTargetID = nil
         phase = .idle
     }
