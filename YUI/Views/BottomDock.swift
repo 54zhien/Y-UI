@@ -57,13 +57,17 @@ struct BottomDock: View {
     }
 
     private var dockRow: some View {
-        HStack(spacing: spacing) {
+        HStack(spacing: 0) {
             circle(symbol: "gearshape", label: "设置") {
                 onOpenSettings()
             }
             .matchedTransitionSource(id: WarRoute.settingsSourceID, in: warNamespace)
 
+            Spacer(minLength: spacing)
+
             warCapsule
+
+            Spacer(minLength: spacing)
 
             circle(symbol: "magnifyingglass", label: "搜索") {
                 withAnimation(.snappy(duration: 0.34)) {
@@ -71,8 +75,6 @@ struct BottomDock: View {
                     model.isSearchingHome = true
                 }
             }
-
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, sideInset)
         .padding(.bottom, bottomInset)
