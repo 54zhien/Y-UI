@@ -113,9 +113,9 @@ struct LiquidSearchBar: View {
                         .accessibilityLabel("清空搜索")
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
                 .frame(height: Theme.controlSize)
-                .background(.regularMaterial, in: Capsule())
+                .glassEffect(.regular.interactive(), in: .capsule)
                 .overlay {
                     Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
                 }

@@ -125,7 +125,7 @@ struct PanelTile: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.primary)
                 .frame(width: 32, height: 32)
-                .background(.regularMaterial, in: Circle())
+                .background(.ultraThinMaterial, in: Circle())
                 .overlay {
                     Circle().strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
                 }
@@ -213,7 +213,7 @@ struct HiddenPanelsBar: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.regularMaterial)
+                    .fill(.ultraThinMaterial)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)

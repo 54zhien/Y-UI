@@ -40,7 +40,8 @@ struct WarModeView: View {
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .top, spacing: 0) { header }
         .overlay(alignment: .top) {
-            EdgeFade(edge: .top)
+            GradientMaskedBlur(edge: .top, opaqueFraction: 0.46)
+                .frame(height: 92)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if isSearching {
@@ -60,7 +61,8 @@ struct WarModeView: View {
         }
         .overlay(alignment: .bottom) {
             if !isSearching {
-                EdgeFade(edge: .bottom)
+                GradientMaskedBlur(edge: .bottom, opaqueFraction: 0.55)
+                    .frame(height: 84)
             }
         }
     }
@@ -188,7 +190,7 @@ struct WarModeView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.regularMaterial)
+                .fill(.ultraThinMaterial)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)

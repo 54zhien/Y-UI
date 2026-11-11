@@ -2,7 +2,7 @@ import SwiftUI
 
 enum Theme {
 
-    static let controlSize: CGFloat = 56
+    static let controlSize: CGFloat = 48
 
     static let minHitSize: CGFloat = 44
 

@@ -11,7 +11,7 @@ struct BottomDock: View {
     var onOpenSettings: () -> Void = {}
     @State private var didLongPress = false
 
-    private let spacing: CGFloat = 10
+    private let spacing: CGFloat = 8
 
     private var sideInset: CGFloat {
         let corner = Theme.screenCornerRadius(for: containerSize)
@@ -25,7 +25,7 @@ struct BottomDock: View {
 
     private var capsuleWidth: CGFloat {
         let available = containerSize.width - sideInset * 2 - Theme.controlSize * 2 - spacing * 2
-        return min(max(available * 0.42, 104), 168)
+        return min(max(available * 0.4, 100), 148)
     }
 
     var body: some View {
@@ -57,17 +57,13 @@ struct BottomDock: View {
     }
 
     private var dockRow: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: spacing) {
             circle(symbol: "gearshape", label: "设置") {
                 onOpenSettings()
             }
             .matchedTransitionSource(id: WarRoute.settingsSourceID, in: warNamespace)
 
-            Spacer(minLength: spacing)
-
             warCapsule
-
-            Spacer(minLength: spacing)
 
             circle(symbol: "magnifyingglass", label: "搜索") {
                 withAnimation(.snappy(duration: 0.34)) {
@@ -75,6 +71,8 @@ struct BottomDock: View {
                     model.isSearchingHome = true
                 }
             }
+
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, sideInset)
         .padding(.bottom, bottomInset)
@@ -84,7 +82,7 @@ struct BottomDock: View {
     private func circle(symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 19, weight: .medium))
+                .font(.system(size: 20, weight: .medium))
                 .frame(width: Theme.controlSize, height: Theme.controlSize)
                 .contentShape(Circle())
         }
@@ -105,7 +103,7 @@ struct BottomDock: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: model.warModeEnabled ? "shield.lefthalf.filled" : "shield")
-                    .font(.system(size: 17, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
 
                 Text("战争模式")
                     .font(Theme.rounded(.footnote, weight: .semibold))
